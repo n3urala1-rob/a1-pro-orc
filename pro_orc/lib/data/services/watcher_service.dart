@@ -4,8 +4,50 @@ import 'dart:developer' as developer;
 import 'package:stream_transform/stream_transform.dart';
 import 'package:watcher/watcher.dart';
 
-/// A plain Dart service class that wraps [DirectoryWatcher] with a 350ms
-/// trailing-edge debounce and defensive error handling.
+/// Directory names whose contents never change what the dashboard displays,
+/// but which produce extremely high event volume (package installs, build
+/// output, Python venvs). Events under these are dropped before debouncing.
+const Set<String> _noiseDirNames = {
+  'node_modules',
+  '.dart_tool',
+  '.next',
+  '.turbo',
+  '.cache',
+  '.venv',
+  '__pycache__',
+};
+
+/// Returns true for filesystem events that must not trigger a rescan.
+///
+/// Background: the watcher also covers `~/.claude/projects`, where every
+/// running Claude session appends to its `*.jsonl` transcript on every
+/// message. Without this filter the dashboard rescanned all projects (2 git
+/// spawns each) continuously while any session was active — the process
+/// storm behind the 2026-08-15/16 EAGAIN incidents.
+///
+/// `.git` internals are noise too (object/pack churn), with one exception:
+/// `HEAD` and `refs` paths, which change exactly on commit/branch switch and
+/// are what keeps the "last commit" display fresh.
+bool isNoiseEvent(String path) {
+  final segments = path.split('/');
+
+  final gitIndex = segments.indexOf('.git');
+  if (gitIndex != -1) {
+    final rest = segments.sublist(gitIndex + 1);
+    final isCommitSignal =
+        rest.isNotEmpty && (rest.last == 'HEAD' || rest.contains('refs'));
+    return !isCommitSignal;
+  }
+
+  if (segments.any(_noiseDirNames.contains)) return true;
+  if (path.endsWith('.jsonl')) return true;
+
+  return false;
+}
+
+/// A plain Dart service class that wraps [DirectoryWatcher] with noise
+/// filtering (see [isNoiseEvent]), a 2s trailing-edge debounce, and defensive
+/// error handling.
 ///
 /// Supports watching multiple directories simultaneously. Each directory
 /// gets its own [DirectoryWatcher] and events are merged into a single stream.
@@ -32,7 +74,7 @@ class WatcherService {
 
       final sub = watcher.events.listen(
         (event) {
-          if (!_controller.isClosed) {
+          if (!_controller.isClosed && !isNoiseEvent(event.path)) {
             _controller.add(event);
           }
         },
@@ -54,7 +96,7 @@ class WatcherService {
 
   /// Returns a debounced stream of [WatchEvent]s from all watched directories.
   Stream<WatchEvent> get events {
-    return _controller.stream.debounce(const Duration(milliseconds: 350));
+    return _controller.stream.debounce(const Duration(seconds: 2));
   }
 
   /// Returns true once all underlying watchers are ready.

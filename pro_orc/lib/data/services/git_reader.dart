@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:meta/meta.dart';
 
 import 'package:pro_orc/data/models/git_data.dart';
+import 'package:pro_orc/data/services/process_runner.dart';
 
 /// Reads git metadata (last commit + GitHub remote URL) for a project directory.
 ///
@@ -143,29 +144,12 @@ String? _remoteToGithubUrl(String remoteUrl) {
   return null;
 }
 
-/// Runs a process with a 5-second timeout.
-///
-/// Uses [Future.any] to race the process against a [Future.delayed] that throws
-/// a [TimeoutException], ensuring git calls never hang indefinitely.
+/// Runs a process with a 5-second timeout that kills the child on expiry
+/// (see [runProcessWithTimeout] for the leak this prevents).
 Future<ProcessResult> _runWithTimeout(
   String executable,
   List<String> arguments,
   String workingDirectory,
 ) {
-  final processFuture = Process.run(
-    executable,
-    arguments,
-    workingDirectory: workingDirectory,
-    runInShell: true,
-  );
-
-  final timeoutFuture = Future<ProcessResult>.delayed(
-    const Duration(seconds: 5),
-    () => throw TimeoutException(
-      'Git command timed out',
-      const Duration(seconds: 5),
-    ),
-  );
-
-  return Future.any([processFuture, timeoutFuture]);
+  return runProcessWithTimeout(executable, arguments, workingDirectory);
 }

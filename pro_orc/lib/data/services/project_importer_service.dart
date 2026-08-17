@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:path/path.dart' as p;
 import 'package:pro_orc/data/models/gitignore_template.dart';
 import 'package:pro_orc/data/models/project_type.dart';
+import 'package:pro_orc/data/services/process_runner.dart';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -255,22 +256,7 @@ Future<ProcessResult> _runWithTimeout(
   List<String> arguments,
   String workingDirectory,
 ) {
-  final processFuture = Process.run(
-    executable,
-    arguments,
-    workingDirectory: workingDirectory,
-    runInShell: true,
-  );
-
-  final timeoutFuture = Future<ProcessResult>.delayed(
-    const Duration(seconds: 5),
-    () => throw TimeoutException(
-      'Git-Befehl hat zu lange gedauert',
-      const Duration(seconds: 5),
-    ),
-  );
-
-  return Future.any([processFuture, timeoutFuture]);
+  return runProcessWithTimeout(executable, arguments, workingDirectory);
 }
 
 // ---------------------------------------------------------------------------

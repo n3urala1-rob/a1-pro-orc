@@ -2,7 +2,7 @@
 ///
 /// These tests verify:
 /// - File create/modify events are emitted
-/// - 350ms debounce collapses rapid file writes (LIVE-01 requirement)
+/// - 2s trailing-edge debounce collapses rapid file writes (LIVE-01 requirement)
 /// - Directory events from macOS FSEvents do not crash the service (watcher#79)
 ///
 /// Tests use real temp directories (no mocking) — same pattern as Phase 7
@@ -64,12 +64,13 @@ void main() {
     final newFile = File('${tempDir.path}/test_create.txt');
     await newFile.writeAsString('hello watcher');
 
-    // Expect a WatchEvent to arrive within 2 seconds (accounts for debounce)
+    // Expect a WatchEvent to arrive within 6 seconds (accounts for the
+    // 2s trailing-edge debounce plus FSEvents latency)
     await completer.future.timeout(
-      const Duration(seconds: 2),
+      const Duration(seconds: 6),
       onTimeout: () => throw TimeoutException(
-        'Expected WatchEvent for file create, but none arrived within 2s',
-        const Duration(seconds: 2),
+        'Expected WatchEvent for file create, but none arrived within 6s',
+        const Duration(seconds: 6),
       ),
     );
 
@@ -114,12 +115,12 @@ void main() {
     // Modify the existing file content
     await existingFile.writeAsString('modified content');
 
-    // Expect a WatchEvent with MODIFY within 2 seconds
+    // Expect a WatchEvent with MODIFY within 6 seconds (2s debounce + slack)
     await completer.future.timeout(
-      const Duration(seconds: 2),
+      const Duration(seconds: 6),
       onTimeout: () => throw TimeoutException(
-        'Expected MODIFY WatchEvent, but none arrived within 2s',
-        const Duration(seconds: 2),
+        'Expected MODIFY WatchEvent, but none arrived within 6s',
+        const Duration(seconds: 6),
       ),
     );
 
@@ -154,18 +155,18 @@ void main() {
       await Future.delayed(const Duration(milliseconds: 10));
     }
 
-    // Collect events over a 1 second window after the rapid writes
-    // (debounce window is 350ms, so all rapid events should be batched)
-    await Future.delayed(const Duration(milliseconds: 1000));
+    // Collect events over a 5 second window after the rapid writes
+    // (debounce window is 2s, so all rapid events should be batched)
+    await Future.delayed(const Duration(seconds: 5));
 
     // Assert that fewer events arrived than files written.
-    // The 350ms trailing-edge debounce should batch the rapid writes.
+    // The 2s trailing-edge debounce should batch the rapid writes.
     expect(
       events.length,
       lessThan(5),
       reason:
           'Expected debounce to collapse 5 rapid writes into fewer events, '
-          'but got ${events.length} events. 350ms debounce should batch rapid writes.',
+          'but got ${events.length} events. 2s debounce should batch rapid writes.',
     );
 
     // At least one event should have arrived (confirming the batch fired)

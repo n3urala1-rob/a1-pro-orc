@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'dart:developer' as developer;
 import 'dart:io';
 
+import 'package:pro_orc/data/services/process_runner.dart';
+
 /// Runs a shell command and returns its result. Matches the subset of
 /// [Process.run] this service depends on, so tests can inject a fake runner
 /// that returns canned [ProcessResult] fixtures without a real `vercel`
@@ -13,16 +15,24 @@ typedef VercelTeamsRunner =
       Duration? timeout,
     });
 
-/// Default [VercelTeamsRunner]: runs the real command via [Process.run]
-/// with `runInShell: true` (macOS GUI apps don't inherit Homebrew PATH). The
-/// [timeout] parameter is accepted for signature compatibility but enforced
-/// by the caller via [Future.timeout], not here.
+/// Default [VercelTeamsRunner]: runs the real command via
+/// [runProcessWithTimeout] — gated by [globalProcessSemaphore] like every
+/// other spawn in the app, and, unlike the old raw [Process.run] call, able
+/// to actually SIGKILL the child if it hangs rather than merely stop
+/// awaiting it. Root cause 4 of the 2026-08-20 process storm: the previous
+/// `.timeout()` wrapper around a bare `Process.run` stopped Dart from
+/// waiting but left the process running.
 Future<ProcessResult> _defaultTeamsRunner(
   String command,
   List<String> args, {
   Duration? timeout,
 }) {
-  return Process.run(command, args, runInShell: true);
+  return runProcessWithTimeout(
+    command,
+    args,
+    '.',
+    timeout: timeout ?? const Duration(seconds: 10),
+  );
 }
 
 /// Detects whether the Vercel CLI is installed and the user is logged in.
@@ -59,14 +69,20 @@ class VercelDetectionService {
   /// is not logged in, or any error occurs.
   Future<bool> isAvailable() async {
     try {
-      final whichResult = await Process.run(_whichCommand, [
-        _vercelCommand,
-      ], runInShell: true);
+      final whichResult = await runProcessWithTimeout(
+        _whichCommand,
+        [_vercelCommand],
+        '.',
+        timeout: _teamsTimeout,
+      );
       if (whichResult.exitCode != 0) return false;
 
-      final whoamiResult = await Process.run(_vercelCommand, [
-        'whoami',
-      ], runInShell: true);
+      final whoamiResult = await runProcessWithTimeout(
+        _vercelCommand,
+        ['whoami'],
+        '.',
+        timeout: _teamsTimeout,
+      );
       return whoamiResult.exitCode == 0;
     } catch (e) {
       developer.log(

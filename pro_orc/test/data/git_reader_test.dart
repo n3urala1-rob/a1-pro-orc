@@ -199,86 +199,101 @@ void main() {
       });
     });
 
-    group('readAllGitData', () {
-      test('returns results for all paths in correct order', () async {
-        final repos = await Future.wait([
-          createTempGitRepo(remote: 'https://github.com/owner/repo1.git'),
-          createTempGitRepo(remote: 'https://github.com/owner/repo2.git'),
-          createTempGitRepo(),
-        ]);
-        addTearDown(() async {
-          for (final r in repos) {
-            await r.delete(recursive: true);
+    // `readAllGitData` (a hand-rolled max-5-concurrent chunking helper) was
+    // dead code — only these tests called it, `ProjectScanner` always called
+    // `readGitData` directly. Removed per the 2026-08-20 process-storm fix:
+    // concurrency capping now lives once, structurally, in
+    // `ProcessSemaphore`/`globalProcessSemaphore` (process_runner.dart),
+    // which every `readGitData` call already goes through — see
+    // `process_semaphore_test.dart` and `project_scanner_concurrency_test.dart`
+    // for the concurrency-limit regression coverage this used to lack (this
+    // helper was never wired to the real scan path, so it never actually
+    // capped anything in production).
+    group(
+      'batched readGitData calls (via Future.wait, as the scanner does)',
+      () {
+        test('returns results for all paths in correct order', () async {
+          final repos = await Future.wait([
+            createTempGitRepo(remote: 'https://github.com/owner/repo1.git'),
+            createTempGitRepo(remote: 'https://github.com/owner/repo2.git'),
+            createTempGitRepo(),
+          ]);
+          addTearDown(() async {
+            for (final r in repos) {
+              await r.delete(recursive: true);
+            }
+          });
+
+          final paths = repos.map((r) => r.path).toList();
+          final results = await Future.wait(paths.map((p) => readGitData(p)));
+
+          expect(results.length, equals(3));
+          expect(
+            results[0].githubUrl,
+            equals('https://github.com/owner/repo1'),
+          );
+          expect(
+            results[1].githubUrl,
+            equals('https://github.com/owner/repo2'),
+          );
+          expect(results[2].githubUrl, isNull);
+          expect(results[2].lastCommitMessage, equals('Initial commit'));
+        });
+
+        test('handles a mix of git and non-git paths', () async {
+          final dirs = await Future.wait(
+            List.generate(
+              12,
+              (i) => i < 6
+                  ? createTempGitRepo()
+                  : Directory.systemTemp.createTemp('non_git_'),
+            ),
+          );
+          addTearDown(() async {
+            for (final d in dirs) {
+              await d.delete(recursive: true);
+            }
+          });
+
+          final paths = dirs.map((d) => d.path).toList();
+          final results = await Future.wait(paths.map((p) => readGitData(p)));
+
+          expect(results.length, equals(12));
+          // First 6 are git repos, last 6 are non-git (empty)
+          for (int i = 0; i < 6; i++) {
+            expect(
+              results[i].isEmpty,
+              isFalse,
+              reason: 'Index $i should be non-empty git repo',
+            );
+          }
+          for (int i = 6; i < 12; i++) {
+            expect(
+              results[i].isEmpty,
+              isTrue,
+              reason: 'Index $i should be empty non-git dir',
+            );
           }
         });
 
-        final paths = repos.map((r) => r.path).toList();
-        final results = await readAllGitData(paths);
+        test('individual errors do not fail the whole batch', () async {
+          final repo = await createTempGitRepo();
+          addTearDown(() => repo.delete(recursive: true));
 
-        expect(results.length, equals(3));
-        expect(results[0].githubUrl, equals('https://github.com/owner/repo1'));
-        expect(results[1].githubUrl, equals('https://github.com/owner/repo2'));
-        expect(results[2].githubUrl, isNull);
-        expect(results[2].lastCommitMessage, equals('Initial commit'));
-      });
+          final results = await Future.wait(
+            [
+              repo.path,
+              '/tmp/nonexistent_path_xyz_987654',
+              repo.path,
+            ].map((p) => readGitData(p)),
+          );
 
-      test('handles 12 paths in chunks of 5 (3 chunks: 5, 5, 2)', () async {
-        // Create 12 directories — mix of git repos and non-git
-        final dirs = await Future.wait(
-          List.generate(
-            12,
-            (i) => i < 6
-                ? createTempGitRepo()
-                : Directory.systemTemp.createTemp('non_git_'),
-          ),
-        );
-        addTearDown(() async {
-          for (final d in dirs) {
-            await d.delete(recursive: true);
-          }
+          expect(results.length, equals(3));
+          expect(results[0].isEmpty, isFalse);
+          expect(results[1].isEmpty, isTrue);
+          expect(results[2].isEmpty, isFalse);
         });
-
-        final paths = dirs.map((d) => d.path).toList();
-        final results = await readAllGitData(paths);
-
-        expect(results.length, equals(12));
-        // First 6 are git repos, last 6 are non-git (empty)
-        for (int i = 0; i < 6; i++) {
-          expect(
-            results[i].isEmpty,
-            isFalse,
-            reason: 'Index $i should be non-empty git repo',
-          );
-        }
-        for (int i = 6; i < 12; i++) {
-          expect(
-            results[i].isEmpty,
-            isTrue,
-            reason: 'Index $i should be empty non-git dir',
-          );
-        }
-      });
-
-      test('returns empty list for empty input', () async {
-        final results = await readAllGitData([]);
-        expect(results, isEmpty);
-      });
-
-      test('individual errors do not fail the whole batch', () async {
-        final repo = await createTempGitRepo();
-        addTearDown(() => repo.delete(recursive: true));
-
-        final results = await readAllGitData([
-          repo.path,
-          '/tmp/nonexistent_path_xyz_987654',
-          repo.path,
-        ]);
-
-        expect(results.length, equals(3));
-        expect(results[0].isEmpty, isFalse);
-        expect(results[1].isEmpty, isTrue);
-        expect(results[2].isEmpty, isFalse);
-      });
-    });
+      },
+    );
   });
 }

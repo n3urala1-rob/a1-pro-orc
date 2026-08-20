@@ -76,8 +76,9 @@ void main() {
         // callers too, not just running ones.
         final pollSub = Stream<void>.periodic(const Duration(milliseconds: 5))
             .listen((_) {
-              if (semaphore.running > maxObserved)
+              if (semaphore.running > maxObserved) {
                 maxObserved = semaphore.running;
+              }
             });
 
         await Future.wait(

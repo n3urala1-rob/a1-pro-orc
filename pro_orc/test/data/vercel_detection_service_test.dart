@@ -71,6 +71,35 @@ void main() {
       },
     );
 
+    test('isAvailable() actually kills a hung process instead of just giving '
+        'up on awaiting it (2026-08-20 process-storm-burst wave 4)', () async {
+      // isAvailable() calls `runProcessWithTimeout(whichCommand,
+      // [vercelCommand], ...)` — using `sleep` as the executable and `30`
+      // (seconds) as `vercelCommand` produces a real `sleep 30` child
+      // process. Before this fix, isAvailable() called bare Process.run
+      // with no timeout at all — this would have hung the whole test for
+      // 30s. Routing through runProcessWithTimeout means the child is
+      // SIGKILLed at teamsTimeout, so the call returns promptly instead.
+      final service = VercelDetectionService(
+        whichCommand: 'sleep',
+        vercelCommand: '30',
+        teamsTimeout: const Duration(milliseconds: 200),
+      );
+
+      final stopwatch = Stopwatch()..start();
+      final available = await service.isAvailable();
+      stopwatch.stop();
+
+      expect(available, isFalse);
+      expect(
+        stopwatch.elapsed,
+        lessThan(const Duration(seconds: 5)),
+        reason:
+            'a hung which/vercel process must be killed promptly, not '
+            'left running for the full 30s sleep duration',
+      );
+    }, timeout: const Timeout(Duration(seconds: 30)));
+
     test(
       'isAvailable() returns false (no crash) for a nonexistent binary',
       () async {

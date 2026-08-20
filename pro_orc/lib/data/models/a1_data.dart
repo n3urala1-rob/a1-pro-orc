@@ -30,6 +30,16 @@ class A1Milestone {
     r'in[_ -]?progress|building|wip|läuft|aktiv',
     caseSensitive: false,
   ).hasMatch(status);
+
+  /// Value equality — see `GitData.operator==` for why this matters for
+  /// `ProjectModel`'s own equality (used as a `FutureProvider.family` key).
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is A1Milestone && name == other.name && status == other.status);
+
+  @override
+  int get hashCode => Object.hash(name, status);
 }
 
 /// Checkbox progress for one `.a1/phases/<name>/PLAN.md`.
@@ -60,6 +70,20 @@ class A1Phase {
   /// True when this phase has unfinished tasks — used to surface the "active"
   /// phase on the project card.
   bool get isActive => totalTasks > 0 && checkedTasks < totalTasks;
+
+  /// Value equality — see `GitData.operator==` for why this matters for
+  /// `ProjectModel`'s own equality (used as a `FutureProvider.family` key).
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is A1Phase &&
+          name == other.name &&
+          checkedTasks == other.checkedTasks &&
+          totalTasks == other.totalTasks &&
+          planPath == other.planPath);
+
+  @override
+  int get hashCode => Object.hash(name, checkedTasks, totalTasks, planPath);
 }
 
 /// Aggregated a1 roadmap/phase state for a single project. Produced by
@@ -98,4 +122,28 @@ class A1Data {
     }
     return total == 0 ? null : (checked / total * 100).round();
   }
+
+  /// Value equality — see `GitData.operator==` for why this matters for
+  /// `ProjectModel`'s own equality (used as a `FutureProvider.family` key).
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is A1Data &&
+          _listEquals(milestones, other.milestones) &&
+          _listEquals(phases, other.phases));
+
+  @override
+  int get hashCode =>
+      Object.hash(Object.hashAll(milestones), Object.hashAll(phases));
+}
+
+/// Element-wise list equality (order-sensitive) — avoids adding
+/// `package:collection` as a direct dependency for this one comparison.
+bool _listEquals<T>(List<T> a, List<T> b) {
+  if (identical(a, b)) return true;
+  if (a.length != b.length) return false;
+  for (var i = 0; i < a.length; i++) {
+    if (a[i] != b[i]) return false;
+  }
+  return true;
 }

@@ -81,39 +81,6 @@ Future<GitData> readGitData(
   }
 }
 
-/// Runs git calls for a list of project paths, chunked to max 5 concurrent calls.
-///
-/// Each call is individually wrapped with [catchError] so a single failure does
-/// not abort the batch. Results are returned in the same order as [projectPaths].
-Future<List<GitData>> readAllGitData(
-  List<String> projectPaths, {
-  String gitBinary = 'git',
-}) async {
-  if (projectPaths.isEmpty) return [];
-
-  final results = <GitData>[];
-
-  for (int i = 0; i < projectPaths.length; i += 5) {
-    final chunk = projectPaths.sublist(
-      i,
-      (i + 5 < projectPaths.length) ? i + 5 : projectPaths.length,
-    );
-
-    final chunkResults = await Future.wait(
-      chunk.map(
-        (path) => readGitData(
-          path,
-          gitBinary: gitBinary,
-        ).catchError((_) => GitData.empty),
-      ),
-    );
-
-    results.addAll(chunkResults);
-  }
-
-  return results;
-}
-
 /// Normalizes a git remote URL to a GitHub HTTPS URL, or returns null if the
 /// remote is not a GitHub remote.
 ///

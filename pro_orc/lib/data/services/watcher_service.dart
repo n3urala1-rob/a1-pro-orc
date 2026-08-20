@@ -7,6 +7,9 @@ import 'package:watcher/watcher.dart';
 /// Directory names whose contents never change what the dashboard displays,
 /// but which produce extremely high event volume (package installs, build
 /// output, Python venvs). Events under these are dropped before debouncing.
+/// Applies to project scan-dir paths (see [isNoiseEvent]) — NOT to
+/// `~/.claude/` paths, which use allowlist semantics instead (see
+/// [_isAllowedClaudeHomePath]).
 const Set<String> _noiseDirNames = {
   'node_modules',
   '.dart_tool',
@@ -15,21 +18,74 @@ const Set<String> _noiseDirNames = {
   '.cache',
   '.venv',
   '__pycache__',
+  'build',
 };
+
+/// Path segments (relative to `~/.claude/`) whose contents are shown by the
+/// dashboard's Claude Tools tab or memory indicator, and must therefore
+/// still trigger a rescan.
+///
+/// Only paths under one of these are allowed through for `~/.claude/`
+/// events — see [_isAllowedClaudeHomePath]. Everything else under
+/// `~/.claude/` is dropped (allowlist, not blacklist): background noise
+/// there is high-volume and unbounded (new subdirectories keep appearing,
+/// e.g. `plugins/cache/<hash>/...`), so enumerating "what to drop" chases
+/// an ever-growing list — root cause 3 of the 2026-08-20 process storm.
+/// `~/.claude/projects/**/memory/` is included so the memory indicator
+/// (rem-sleep consolidation) keeps working.
+const List<String> _allowedClaudeHomeSegmentPrefixes = [
+  'skills',
+  'agents',
+  'plugins/installed_plugins.json',
+  'plugins/known_marketplaces.json',
+  'settings.json',
+  'settings.local.json',
+];
+
+/// Returns true if [pathAfterClaudeHome] (the path segments after `.claude`)
+/// is something the dashboard actually displays and must rescan for.
+bool _isAllowedClaudeHomePath(List<String> pathAfterClaudeHome) {
+  if (pathAfterClaudeHome.isEmpty) return false;
+  final rest = pathAfterClaudeHome.join('/');
+
+  // Memory indicator: ~/.claude/projects/<encoded>/memory/**
+  if (pathAfterClaudeHome.first == 'projects' &&
+      pathAfterClaudeHome.contains('memory')) {
+    return true;
+  }
+
+  for (final prefix in _allowedClaudeHomeSegmentPrefixes) {
+    if (rest == prefix || rest.startsWith('$prefix/')) return true;
+  }
+
+  return false;
+}
 
 /// Returns true for filesystem events that must not trigger a rescan.
 ///
-/// Background: the watcher also covers `~/.claude/projects`, where every
-/// running Claude session appends to its `*.jsonl` transcript on every
-/// message. Without this filter the dashboard rescanned all projects (2 git
-/// spawns each) continuously while any session was active — the process
-/// storm behind the 2026-08-15/16 EAGAIN incidents.
+/// Two different policies apply depending on where [path] lives:
 ///
-/// `.git` internals are noise too (object/pack churn), with one exception:
-/// `HEAD` and `refs` paths, which change exactly on commit/branch switch and
-/// are what keeps the "last commit" display fresh.
+/// - Under `~/.claude/`: **allowlist**. Only paths the dashboard actually
+///   reads (skills/, agents/, plugins/installed_plugins.json,
+///   plugins/known_marketplaces.json, settings.json,
+///   projects/**/memory/**) pass through; everything else is noise —
+///   including `plugins/cache/`, `tool-results/`, `subagents/`,
+///   `file-history/`, `shell-snapshots/`, `todos/`, and any `.jsonl`
+///   session transcript. A blacklist here chases an unbounded, ever-growing
+///   set of high-churn directories (root cause 3 of the 2026-08-20 process
+///   storm — 483 changes under `plugins/cache/` alone were observed in 2h).
+/// - Everywhere else (project scan dirs): **blacklist**, as before —
+///   `node_modules`, `.dart_tool`, build output, etc. are dropped, but
+///   ordinary project files, `.planning/`, `.a1/`, and `.git/HEAD`/`refs`
+///   (commit signal) always pass through.
 bool isNoiseEvent(String path) {
   final segments = path.split('/');
+
+  final claudeIndex = segments.indexOf('.claude');
+  if (claudeIndex != -1) {
+    final rest = segments.sublist(claudeIndex + 1);
+    return !_isAllowedClaudeHomePath(rest);
+  }
 
   final gitIndex = segments.indexOf('.git');
   if (gitIndex != -1) {

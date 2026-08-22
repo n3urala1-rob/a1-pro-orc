@@ -4,7 +4,7 @@ type: roadmap
 project: pro-orc
 title: "Pro Orc"
 status: active
-updated: 2026-07-22
+updated: 2026-08-22
 source: "scaffolded by a1-tools product init"
 milestones:
   - id: m1-stabilization
@@ -46,6 +46,14 @@ milestones:
   - id: m10-detail-ui-refinement
     title: "Detail UI refinement (compact, high-level)"
     status: done
+    target: null
+  - id: m11-agentic-loop-foundation
+    title: "Learning loop & second brain foundation"
+    status: in-progress
+    target: null
+  - id: m12-vault-integration
+    title: "ProOrc vault integration & skill buttons"
+    status: planned
     target: null
 features:
   - id: 002-project-organization
@@ -150,6 +158,70 @@ features:
     finished: 2026-07-22
     spec_path: projects/pro-orc/spec/009-permission-popup-repo-owner.md
     plan_path: null
+  - id: 012-close-learning-loop
+    milestone: m11-agentic-loop-foundation
+    title: "Close the learning loop: run a1-evolve over 7 pending postmortems, fix cloud-brain push 404"
+    status: done
+    stage: done
+    depends_on: []
+    started: 2026-08-22
+    finished: 2026-08-22
+    spec_path: null
+    plan_path: null
+  - id: 013-vault-navigation-map
+    milestone: m11-agentic-loop-foundation
+    title: "Vault navigation map: index.md per top-level folder + CLAUDE.md in vault root"
+    status: planned
+    stage: null
+    depends_on: []
+    started: null
+    finished: null
+    spec_path: null
+    plan_path: null
+  - id: 014-session-skill-mining
+    milestone: m11-agentic-loop-foundation
+    title: "Session mining audit: extract repeated tasks from claude-mem history into new skills"
+    status: planned
+    stage: null
+    depends_on: []
+    started: null
+    finished: null
+    spec_path: null
+    plan_path: null
+  - id: 015-learning-loop-automation
+    milestone: m11-agentic-loop-foundation
+    title: "Learning automation: weekly scheduled check for >=5 learnings and MEMORY.md limit"
+    status: planned
+    stage: null
+    depends_on:
+      - 012-close-learning-loop
+    started: null
+    finished: null
+    spec_path: null
+    plan_path: null
+  - id: 016-vault-status-writer
+    milestone: m12-vault-integration
+    title: "ProOrc writes project status into vault project hubs"
+    status: planned
+    stage: null
+    depends_on:
+      - 013-vault-navigation-map
+    started: null
+    finished: null
+    spec_path: null
+    plan_path: null
+  - id: 017-skill-buttons-headless
+    milestone: m12-vault-integration
+    title: "Skill buttons: one-click headless claude -p runs per project, output to vault"
+    status: planned
+    stage: null
+    depends_on:
+      - 014-session-skill-mining
+      - 016-vault-status-writer
+    started: null
+    finished: null
+    spec_path: null
+    plan_path: null
 next: null
 ---
 
@@ -245,6 +317,17 @@ None.
 - **2026-07-22** — 011-permission-popup-repo-owner -> merge — stage transition via `product stage`
 - **2026-07-22** — 011-permission-popup-repo-owner -> origin-cleanup — stage transition via `product stage`
 - **2026-07-22** — 011-permission-popup-repo-owner -> done — stage transition via `product stage`
+- **2026-08-21** — milestone 'm11-agentic-loop-foundation' added — Close the a1 self-improvement loop and give Claude a cheap navigation map of the vault (video levels 1+2: skills, loops, memory, state).
+- **2026-08-21** — milestone 'm12-vault-integration' added — ProOrc feeds the second brain (status writer) and exposes a1 skills as one-click headless buttons (video level 3).
+- **2026-08-21** — feature '012-close-learning-loop' added — The accumulated learnings (7 postmortems > threshold 5) are synthesized via a1-evolve and the broken cloud-brain push endpoint (HTTP 404 since 2026-08-17) works again.
+- **2026-08-21** — feature '013-vault-navigation-map' added — Every top-level vault folder has a maintained index/MOC and the vault root has a CLAUDE.md with structure + navigation pattern, so Claude navigates the vault cheaply (Karpathy pattern).
+- **2026-08-21** — feature '014-session-skill-mining' added — Recurring manual workflows (e.g. the ProOrc release process) are identified from real session history and codified as skills.
+- **2026-08-21** — feature '015-learning-loop-automation' added — A scheduled routine checks weekly whether >=5 new learnings call for a1-evolve and whether MEMORY.md approaches its 200-line limit (rem-sleep), removing reliance on manual discipline.
+- **2026-08-21** — feature '016-vault-status-writer' added — ProOrc updates status lines in the vault's project/<slug>.md hubs so the dashboard feeds the second brain instead of living beside it.
+- **2026-08-21** — feature '017-skill-buttons-headless' added — ProOrc project cards offer buttons that run a1 skills headless via claude -p (through the ProcessSemaphore), writing results into the vault.
+- **2026-08-22** — 012-close-learning-loop -> started — stage transition via `product stage`
+- **2026-08-22** — 012-close-learning-loop -> done — stage transition via `product stage`
+- **2026-08-22** — milestone m11-agentic-loop-foundation status -> in-progress — marker set via `product markers --set`
 
 ## Appendix — migrated details
 

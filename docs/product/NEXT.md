@@ -4,11 +4,12 @@
 
 # Pro Orc
 
-updated: 2026-07-22
+updated: 2026-08-22
 
 ## You are here
 
 - **m8-project-organization** — Project organization (target: unset)
+- **m11-agentic-loop-foundation** — Learning loop & second brain foundation (target: unset)
 
 ## In-flight features
 
@@ -16,8 +17,8 @@ None.
 
 ## Next cursor
 
-None — no eligible feature (all done/cancelled, or blocked by unmet dependencies).
+**013-vault-navigation-map** — recommended next feature (no unmet dependencies, first eligible feature in roadmap order).
 
 ## How to continue
 
-Run `a1-progress` to review overall project state and decide the next milestone.
+Run `a1-plan` to create an executable plan for the next-cursor feature, or `a1-execute` if a plan already exists.

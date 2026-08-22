@@ -171,21 +171,21 @@ features:
   - id: 013-vault-navigation-map
     milestone: m11-agentic-loop-foundation
     title: "Vault navigation map: index.md per top-level folder + CLAUDE.md in vault root"
-    status: planned
-    stage: null
+    status: done
+    stage: done
     depends_on: []
-    started: null
-    finished: null
+    started: 2026-08-22
+    finished: 2026-08-22
     spec_path: null
     plan_path: null
   - id: 014-session-skill-mining
     milestone: m11-agentic-loop-foundation
     title: "Session mining audit: extract repeated tasks from claude-mem history into new skills"
-    status: planned
-    stage: null
+    status: done
+    stage: done
     depends_on: []
-    started: null
-    finished: null
+    started: 2026-08-22
+    finished: 2026-08-22
     spec_path: null
     plan_path: null
   - id: 015-learning-loop-automation
@@ -328,6 +328,10 @@ None.
 - **2026-08-22** — 012-close-learning-loop -> started — stage transition via `product stage`
 - **2026-08-22** — 012-close-learning-loop -> done — stage transition via `product stage`
 - **2026-08-22** — milestone m11-agentic-loop-foundation status -> in-progress — marker set via `product markers --set`
+- **2026-08-22** — 013-vault-navigation-map -> started — stage transition via `product stage`
+- **2026-08-22** — 013-vault-navigation-map -> done — stage transition via `product stage`
+- **2026-08-22** — 014-session-skill-mining -> started — stage transition via `product stage`
+- **2026-08-22** — 014-session-skill-mining -> done — stage transition via `product stage`
 
 ## Appendix — migrated details
 

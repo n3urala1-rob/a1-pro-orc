@@ -17,7 +17,7 @@ None.
 
 ## Next cursor
 
-**013-vault-navigation-map** — recommended next feature (no unmet dependencies, first eligible feature in roadmap order).
+**015-learning-loop-automation** — recommended next feature (all dependencies (012-close-learning-loop) are done).
 
 ## How to continue
 

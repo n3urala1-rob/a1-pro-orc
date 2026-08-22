@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated": "2026-08-22T07:13:24.063Z",
+  "generated": "2026-08-22T09:57:57.106Z",
   "project": {
     "id": "pro-orc",
     "title": "Pro Orc",
@@ -221,11 +221,11 @@
       "id": "013-vault-navigation-map",
       "milestone": "m11-agentic-loop-foundation",
       "title": "Vault navigation map: index.md per top-level folder + CLAUDE.md in vault root",
-      "status": "planned",
-      "stage": null,
+      "status": "done",
+      "stage": "done",
       "depends_on": [],
-      "started": null,
-      "finished": null,
+      "started": "2026-08-22",
+      "finished": "2026-08-22",
       "spec_path": null,
       "plan_path": null
     },
@@ -233,11 +233,11 @@
       "id": "014-session-skill-mining",
       "milestone": "m11-agentic-loop-foundation",
       "title": "Session mining audit: extract repeated tasks from claude-mem history into new skills",
-      "status": "planned",
-      "stage": null,
+      "status": "done",
+      "stage": "done",
       "depends_on": [],
-      "started": null,
-      "finished": null,
+      "started": "2026-08-22",
+      "finished": "2026-08-22",
       "spec_path": null,
       "plan_path": null
     },
@@ -286,7 +286,7 @@
     }
   ],
   "next": null,
-  "cursor": "013-vault-navigation-map",
+  "cursor": "015-learning-loop-automation",
   "vision": {
     "path": "docs/product/VISION.md",
     "updated": "2026-07-15",

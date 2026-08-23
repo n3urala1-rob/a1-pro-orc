@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Pro Orc — Vault-Status-Writer (Feature 010) — UX-Mockups</title>
+<style>
+  :root {
+    --bg-base: #0E0E14;
+    --bg-surf: #12181F;
+    --bg-elev: #171D26;
+    --bg-card: #1C222B;
+
+    --cyan-hi: #00DEEB;
+    --cyan: #00CDDC;
+    --cyan-lo: #009FAF;
+    --cyan-orb: #00879A;
+
+    --fuch-hi: #FA48FA;
+    --fuch: #D710D8;
+
+    --text-pri: #E0E5EB;
+    --text-sec: #9399A0;
+    --text-dim: #5F6469;
+    --text-dis: #404347;
+
+    --amber-hi: #FFCA28;
+    --amber: #F5B800;
+    --amber-lo: #C49000;
+
+    --emerald-hi: #34D399;
+    --emerald: #00C97A;
+    --emerald-lo: #009E5E;
+
+    --violet-hi: #B28DF5;
+    --violet: #9D68F0;
+
+    --radius-card: 14px;
+    --radius-sm: 8px;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background:
+      radial-gradient(ellipse 900px 500px at 15% -10%, rgba(0, 135, 154, 0.16), transparent 60%),
+      radial-gradient(ellipse 700px 500px at 100% 10%, rgba(157, 104, 240, 0.08), transparent 55%),
+      var(--bg-base);
+    color: var(--text-pri);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    padding: 40px 32px 120px;
+  }
+
+  .page-header {
+    max-width: 1400px;
+    margin: 0 auto 48px;
+  }
+  .page-header h1 {
+    font-size: 22px;
+    font-weight: 600;
+    margin: 0 0 6px;
+    letter-spacing: -0.01em;
+  }
+  .page-header .meta {
+    color: var(--text-dim);
+    font-size: 12.5px;
+    font-family: "SF Mono", Menlo, monospace;
+  }
+  .page-header p.lead {
+    color: var(--text-sec);
+    max-width: 760px;
+    margin: 14px 0 0;
+    font-size: 13.5px;
+  }
+
+  .surface-section {
+    max-width: 1400px;
+    margin: 0 auto 64px;
+  }
+  .surface-section > h2 {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-pri);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0 0 4px;
+  }
+  .surface-section > h2 .badge {
+    font-size: 10.5px;
+    font-weight: 600;
+    color: var(--cyan);
+    background: rgba(0, 205, 220, 0.12);
+    border: 1px solid rgba(0, 205, 220, 0.3);
+    border-radius: 5px;
+    padding: 2px 7px;
+    letter-spacing: 0.03em;
+  }
+  .surface-section > p.desc {
+    color: var(--text-dim);
+    font-size: 12.5px;
+    margin: 6px 0 22px;
+    max-width: 780px;
+  }
+
+  .variant-row {
+    display: flex;
+    gap: 22px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .variant {
+    flex: 1 1 380px;
+    max-width: 460px;
+    min-width: 340px;
+  }
+  .variant-label {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .variant-label .v-tag {
+    font-family: "SF Mono", Menlo, monospace;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--bg-base);
+    background: var(--cyan);
+    border-radius: 5px;
+    padding: 2px 7px;
+  }
+  .variant-label .v-tag.recommended {
+    background: var(--emerald);
+  }
+  .variant-label .v-name {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--text-pri);
+  }
+  .variant-tradeoff {
+    color: var(--text-dim);
+    font-size: 11.5px;
+    margin: 6px 2px 14px;
+    line-height: 1.45;
+  }
+  .variant-tradeoff .rec-tag {
+    color: var(--emerald-hi);
+    font-weight: 600;
+  }
+
+  /* ---- glass card, mirrors GlassCard widget ---- */
+  .glass-card {
+    background: rgba(28, 34, 43, 0.55);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: var(--radius-card);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255,255,255,0.03);
+    padding: 16px;
+  }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 2px;
+  }
+  .section-header .icon {
+    width: 18px;
+    height: 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--cyan);
+    font-size: 15px;
+  }
+  .section-header .title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-pri);
+  }
+  .section-subtitle {
+    color: var(--text-dim);
+    font-size: 12px;
+    margin: 4px 0 12px;
+  }
+
+  .row { display: flex; align-items: center; gap: 8px; }
+  .row.spread { justify-content: space-between; }
+  .grow { flex: 1; min-width: 0; }
+
+  .field-label {
+    font-size: 11.5px;
+    color: var(--text-sec);
+    font-weight: 600;
+    margin: 14px 0 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  .field-label:first-child { margin-top: 0; }
+
+  input[type="text"], .fake-input {
+    width: 100%;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: var(--radius-sm);
+    color: var(--text-pri);
+    font-size: 12.5px;
+    font-family: "SF Mono", Menlo, monospace;
+    padding: 9px 11px;
+    outline: none;
+  }
+  input[type="text"]::placeholder { color: var(--text-dim); }
+  input[type="text"]:focus, .fake-input.focus {
+    border-color: rgba(0, 205, 220, 0.5);
+    background: rgba(0, 205, 220, 0.05);
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12.5px;
+    font-weight: 500;
+    border-radius: var(--radius-sm);
+    padding: 8px 13px;
+    cursor: default;
+    border: 1px solid transparent;
+    white-space: nowrap;
+  }
+  .btn-text { color: var(--cyan); background: transparent; padding: 8px 10px; }
+  .btn-outline { color: var(--cyan); border-color: rgba(0,205,220,0.3); background: transparent; }
+  .btn-solid { color: var(--bg-base); background: var(--cyan); font-weight: 600; }
+  .btn-ghost { color: var(--text-sec); background: rgba(255,255,255,0.04); }
+  .btn-ghost:hover {}
+  .btn-sm { padding: 5px 9px; font-size: 11.5px; }
+
+  .switch {
+    width: 38px; height: 22px;
+    border-radius: 11px;
+    position: relative;
+    background: rgba(255,255,255,0.12);
+    display: inline-block;
+    flex-shrink: 0;
+  }
+  .switch.on { background: var(--cyan-lo); }
+  .switch::after {
+    content: "";
+    position: absolute;
+    top: 2px; left: 2px;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: #fff;
+    transition: left .15s;
+  }
+  .switch.on::after { left: 18px; background: var(--bg-base); }
+
+  .status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    font-weight: 600;
+    border-radius: 6px;
+    padding: 3px 8px;
+  }
+  .status-pill.ok { color: var(--emerald-hi); background: rgba(0,201,122,0.12); }
+  .status-pill.warn { color: var(--amber-hi); background: rgba(245,184,0,0.12); }
+  .status-pill.dim { color: var(--text-dim); background: rgba(255,255,255,0.04); }
+  .status-pill .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+  .hint-line {
+    display: flex;
+    align-items: flex-start;
+    gap: 7px;
+    font-size: 11.5px;
+    color: var(--amber);
+    margin-top: 10px;
+    line-height: 1.4;
+  }
+  .hint-line .icon { font-size: 13px; margin-top: 1px; }
+
+  .divider {
+    height: 1px;
+    background: rgba(255,255,255,0.06);
+    margin: 14px 0;
+  }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 6px;
+    padding: 4px 9px;
+    font-size: 11.5px;
+    color: var(--text-sec);
+    font-family: "SF Mono", Menlo, monospace;
+  }
+
+  .progress-track {
+    height: 5px;
+    border-radius: 3px;
+    background: rgba(255,255,255,0.07);
+    overflow: hidden;
+    margin: 8px 0;
+  }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, var(--cyan-lo), var(--cyan)); border-radius: 3px; }
+
+  .summary-line {
+    font-size: 12px;
+    color: var(--text-sec);
+  }
+  .summary-line b { color: var(--text-pri); font-weight: 600; }
+
+  /* --- V2 expandable list rows --- */
+  .link-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: rgba(255,255,255,0.025);
+    margin-bottom: 6px;
+    font-size: 12px;
+  }
+  .link-row .proj { color: var(--text-pri); font-weight: 500; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .link-row .arrow { color: var(--text-dim); font-size: 11px; }
+  .link-row .hub { color: var(--cyan); font-family: "SF Mono", Menlo, monospace; font-size: 11.5px; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* --- card mock for surface 2 project card --- */
+  .project-card-mock {
+    background: var(--bg-card);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 12px;
+    padding: 14px;
+    position: relative;
+  }
+  .project-card-mock .pc-title { font-size: 13.5px; font-weight: 600; color: var(--text-pri); margin-bottom: 4px; }
+  .project-card-mock .pc-desc { font-size: 11.5px; color: var(--text-dim); margin-bottom: 10px; }
+  .project-card-mock .pc-actions { display: flex; gap: 6px; }
+
+  .banner {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(0, 205, 220, 0.07);
+    border: 1px solid rgba(0, 205, 220, 0.25);
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-size: 12px;
+    margin-top: 10px;
+  }
+  .banner .icon { color: var(--cyan); font-size: 15px; }
+  .banner .txt { flex: 1; color: var(--text-sec); }
+  .banner b { color: var(--text-pri); }
+
+  .popover {
+    background: var(--bg-elev);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 10px;
+    padding: 12px;
+    margin-top: 8px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    font-size: 12px;
+  }
+
+  .dialog-mock {
+    background: var(--bg-surf);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 14px;
+    padding: 0;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.55);
+  }
+  .dialog-mock .dh {
+    padding: 16px 18px 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+  .dialog-mock .dh .t { font-size: 15px; font-weight: 600; color: var(--text-pri); }
+  .dialog-mock .dh .s { font-size: 11.5px; color: var(--text-dim); margin-top: 3px; }
+  .dialog-mock .db { padding: 12px 18px; max-height: 320px; overflow: hidden; }
+  .dialog-mock .df { padding: 12px 18px 16px; display: flex; justify-content: flex-end; gap: 8px; border-top: 1px solid rgba(255,255,255,0.06); }
+
+  .match-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 10px;
+    border-radius: 8px;
+    margin-bottom: 6px;
+    background: rgba(255,255,255,0.025);
+  }
+  .match-row.no-match { border-left: 2px solid var(--violet); }
+  .match-row.high { border-left: 2px solid var(--emerald); }
+  .match-row .mr-main { flex: 1; min-width: 0; }
+  .match-row .mr-proj { font-size: 12.5px; color: var(--text-pri); font-weight: 500; }
+  .match-row .mr-sub { font-size: 11px; color: var(--text-dim); margin-top: 2px; font-family: "SF Mono", Menlo, monospace; }
+  .match-row .mr-conf { font-size: 10.5px; padding: 2px 6px; border-radius: 5px; font-weight: 600; }
+  .match-row .mr-conf.high { color: var(--emerald-hi); background: rgba(0,201,122,0.12); }
+  .match-row .mr-conf.new { color: var(--violet-hi); background: rgba(157,104,240,0.14); }
+  .match-row .mr-actions { display: flex; gap: 4px; }
+
+  .detail-panel-mock {
+    background: var(--bg-surf);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 12px;
+    padding: 16px;
+  }
+  .tab-strip {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 14px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    padding-bottom: 0;
+  }
+  .tab-strip .tab {
+    font-size: 11.5px;
+    color: var(--text-dim);
+    padding: 6px 10px;
+    border-bottom: 2px solid transparent;
+  }
+  .tab-strip .tab.active { color: var(--cyan); border-bottom-color: var(--cyan); }
+
+  code.inline {
+    font-family: "SF Mono", Menlo, monospace;
+    background: rgba(255,255,255,0.06);
+    border-radius: 4px;
+    padding: 1px 5px;
+    font-size: 11px;
+    color: var(--cyan-hi);
+  }
+
+  .footer-note {
+    max-width: 1400px;
+    margin: 60px auto 0;
+    padding-top: 24px;
+    border-top: 1px solid rgba(255,255,255,0.07);
+    color: var(--text-dim);
+    font-size: 11.5px;
+  }
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <h1>Vault-Status-Writer — UX-Mockups (Feature 010 / M12)</h1>
+  <div class="meta">Pro Orc · macOS Menubar App · Dark Glassmorphism · 2026-08-23</div>
+  <p class="lead">
+    Zwei bestehende Oberflächen werden erweitert — <b>keine neue Screen/Tab</b>.
+    Alle Varianten sind Wireframe-Annäherungen an das echte Flutter-Theme
+    (bgBase <code class="inline">#0E0E14</code>, cyan-Akzent <code class="inline">#00CDDC</code>,
+    GlassCard-Pattern). Kein Implementierungscode — dient als Klick-Vorlage für a1-walter.
+  </p>
+</div>
+
+<!-- ============================================================ -->
+<!-- SURFACE 1: Settings-Sektion -->
+<!-- ============================================================ -->
+<div class="surface-section">
+  <h2>Surface 1 <span class="badge">Settings-Tab · neue Sektion</span></h2>
+  <p class="desc">
+    Reiht sich unterhalb der bestehenden „Obsidian-Vault"-Sektion (Learning-Ansicht) ein — dort liegt
+    bereits ein Vault-Pfad-Feld für einen anderen Zweck. Diese neue Sektion ist bewusst separat betitelt
+    („Vault-Sync"), um Verwechslung zu vermeiden, kann den Pfad aber vorbefüllen, falls identisch.
+    Deckt FR-001 (Pfad + Konvention, deaktiviert ohne validen Pfad), FR-014 (stiller Hinweis bei
+    unerreichbarem Vault) und den Einstiegspunkt zur Hub-Zuordnungsübersicht ab.
+  </p>
+
+  <div class="variant-row">
+
+    <!-- V1: Compact single card -->
+    <div class="variant">
+      <div class="variant-label">
+        <span class="v-tag">V1</span>
+        <span class="v-name">Kompakte Einzelkarte</span>
+      </div>
+      <div class="variant-tradeoff">
+        Ein Toggle, ein Pfad-Feld, eine Konventions-Zeile — minimal, passt exakt ins bestehende
+        Sektions-Raster (wie Git-Pfad-Sektion). Kein Statusüberblick sichtbar, Zuordnungen nur über
+        Textlink erreichbar.
+      </div>
+
+      <div class="glass-card">
+        <div class="row spread">
+          <div class="section-header">
+            <span class="icon">&#128194;</span>
+            <span class="title">Vault-Sync</span>
+          </div>
+          <span class="switch on"></span>
+        </div>
+        <div class="section-subtitle">Projektstatus automatisch in Obsidian-Hubs schreiben</div>
+
+        <div class="field-label">Vault-Pfad</div>
+        <div class="row">
+          <input type="text" class="grow" value="~/N3URAL-Vault" />
+          <button class="btn btn-ghost btn-sm">&#128193;</button>
+        </div>
+        <div class="row" style="margin-top:6px;">
+          <span class="status-pill ok"><span class="dot"></span> Erreichbar</span>
+        </div>
+
+        <div class="field-label">Ordner-Konvention</div>
+        <input type="text" value="project/&lt;slug&gt;.md" />
+
+        <div class="divider"></div>
+
+        <div class="row spread">
+          <span style="font-size:12px; color: var(--text-sec);">42 von 55 Projekten verknüpft</span>
+          <button class="btn btn-text btn-sm">Zuordnungen anzeigen &rarr;</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- V2: Expandable card with status summary — RECOMMENDED -->
+    <div class="variant">
+      <div class="variant-label">
+        <span class="v-tag recommended">V2</span>
+        <span class="v-name">Erweiterbare Karte mit Statusüberblick</span>
+      </div>
+      <div class="variant-tradeoff">
+        <span class="rec-tag">Empfehlung.</span> Gleiche Kompaktheit im eingeklappten Zustand, aber die
+        „X von Y verknüpft"-Zahl ist sofort sichtbar (nicht nur bei Klick) und der Ausklapp-Bereich zeigt
+        die tatsächlichen Zuordnungen inline — vermeidet einen zusätzlichen Dialog-Sprung für den
+        häufigsten Fall („kurz nachsehen, welche Hubs verlinkt sind").
+      </div>
+
+      <div class="glass-card">
+        <div class="row spread">
+          <div class="section-header">
+            <span class="icon">&#128194;</span>
+            <span class="title">Vault-Sync</span>
+          </div>
+          <span class="switch on"></span>
+        </div>
+        <div class="section-subtitle">Projektstatus automatisch in Obsidian-Hubs schreiben</div>
+
+        <div class="field-label">Vault-Pfad</div>
+        <div class="row">
+          <input type="text" class="grow" value="~/N3URAL-Vault" />
+          <button class="btn btn-ghost btn-sm">&#128193;</button>
+        </div>
+
+        <div class="field-label">Ordner-Konvention</div>
+        <input type="text" value="project/&lt;slug&gt;.md" />
+
+        <div class="divider"></div>
+
+        <div class="row spread" style="cursor:default;">
+          <div>
+            <div class="summary-line"><b>42 von 55</b> Projekten verknüpft</div>
+            <div class="progress-track" style="width:180px;"><div class="progress-fill" style="width:76%;"></div></div>
+          </div>
+          <button class="btn btn-outline btn-sm">Details &#9662;</button>
+        </div>
+
+        <div style="margin-top:10px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.06);">
+          <div class="link-row">
+            <span class="proj">pro-orc</span>
+            <span class="arrow">&rarr;</span>
+            <span class="hub">project/pro-orc.md</span>
+            <span class="status-pill ok" style="flex-shrink:0;">✓</span>
+          </div>
+          <div class="link-row">
+            <span class="proj">n3ural-platform</span>
+            <span class="arrow">&rarr;</span>
+            <span class="hub">project/n3ural-platform.md</span>
+            <span class="status-pill ok" style="flex-shrink:0;">✓</span>
+          </div>
+          <div class="link-row">
+            <span class="proj">niimo-mobile</span>
+            <span class="arrow">&rarr;</span>
+            <span style="color:var(--violet-hi); font-size:11px; flex:1;">3 Vorschläge offen</span>
+            <span class="status-pill warn" style="flex-shrink:0;">?</span>
+          </div>
+          <button class="btn btn-text btn-sm" style="margin-top:4px; padding-left:2px;">Alle 55 Zuordnungen anzeigen &rarr;</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- V3: Split — status as own sub-row with unreachable state shown -->
+    <div class="variant">
+      <div class="variant-label">
+        <span class="v-tag">V3</span>
+        <span class="v-name">Getrennte Status-Zeile (Fehlerfall demonstriert)</span>
+      </div>
+      <div class="variant-tradeoff">
+        Wie V1, aber der Erreichbarkeits-Hinweis ist strukturell von den Eingabefeldern getrennt — zeigt
+        hier bewusst den <b>FR-014-Fehlerfall</b> (Pfad nicht erreichbar). Klarste Trennung von
+        „Konfiguration" vs. „Laufzeit-Status", aber nimmt mehr vertikalen Platz ein als V1/V2.
+      </div>
+
+      <div class="glass-card">
+        <div class="row spread">
+          <div class="section-header">
+            <span class="icon">&#128194;</span>
+            <span class="title">Vault-Sync</span>
+          </div>
+          <span class="switch on"></span>
+        </div>
+        <div class="section-subtitle">Projektstatus automatisch in Obsidian-Hubs schreiben</div>
+
+        <div class="field-label">Vault-Pfad</div>
+        <input type="text" value="~/N3URAL-Vault-alt" />
+
+        <div class="field-label">Ordner-Konvention</div>
+        <input type="text" value="project/&lt;slug&gt;.md" />
+
+        <div class="hint-line">
+          <span class="icon">&#9888;</span>
+          <span>Vault-Pfad nicht erreichbar — Sync pausiert bis der Pfad wieder existiert. Kein Datenverlust, Zuordnungen bleiben erhalten.</span>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="row spread">
+          <span style="font-size:12px; color: var(--text-dim);">Zuordnungen zuletzt aktiv: 42 von 55</span>
+          <button class="btn btn-text btn-sm">Zuordnungen anzeigen &rarr;</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SURFACE 2: Hub-Zuordnungs-Bestätigung -->
+<!-- ============================================================ -->
+<div class="surface-section">
+  <h2>Surface 2 <span class="badge">Hub-Zuordnungs-Bestätigung</span></h2>
+  <p class="desc">
+    Bestätigung „Projekt X &rarr; Hub Y" (FR-002/FR-003), inkl. No-Match-Fall (FR-004 Auto-Create-Ankündigung
+    „wird neu angelegt: project/&lt;slug&gt;.md") und Platzierung von „Jetzt synchronisieren" (FR-012).
+  </p>
+
+  <div class="variant-row">
+
+    <!-- V1: Inline banner/badge on project card -->
+    <div class="variant">
+      <div class="variant-label">
+        <span class="v-tag">V1</span>
+        <span class="v-name">Inline-Badge auf der Projekt-Karte + Popover</span>
+      </div>
+      <div class="variant-tradeoff">
+        Zuordnung passiert direkt dort, wo Robert sowieso hinschaut (Projekt-Karte). Aber: bei vielen
+        offenen Vorschlägen gleichzeitig (z.B. nach Erstinstallation mit 55 Projekten) entsteht Badge-Spam
+        über die ganze Übersicht — kein Batch-Workflow.
+      </div>
+
+      <div class="project-card-mock">
+        <div class="pc-title">niimo-mobile</div>
+        <div class="pc-desc">Flutter Mobile App — Building · 62%</div>
+        <div class="pc-actions">
+          <button class="btn btn-outline btn-sm">&#9998; Öffnen</button>
+          <button class="btn btn-ghost btn-sm">&#128257; Jetzt synchronisieren</button>
+        </div>
+
+        <div class="banner">
+          <span class="icon">&#128279;</span>
+          <span class="txt">Vault-Hub-Vorschlag: <b>project/niimo-mobile-app.md</b> (87% Übereinstimmung)</span>
+        </div>
+        <div class="popover">
+          <div style="color:var(--text-sec); margin-bottom:8px;">Diesem Hub zuordnen?</div>
+          <div class="row" style="gap:6px;">
+            <button class="btn btn-solid btn-sm">Bestätigen</button>
+            <button class="btn btn-ghost btn-sm">Anderen wählen</button>
+            <button class="btn btn-ghost btn-sm">Später</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- V2: GlassDialog batch confirm — RECOMMENDED -->
+    <div class="variant">
+      <div class="variant-label">
+        <span class="v-tag recommended">V2</span>
+        <span class="v-name">GlassDialog — Batch-Bestätigung aller Vorschläge</span>
+      </div>
+      <div class="variant-tradeoff">
+        <span class="rec-tag">Empfehlung.</span> Ein Ort für alle offenen Zuordnungen (auch den No-Match-Fall),
+        pro Zeile Accept/Reject/„Manuell wählen" — passt zum „einmalig bestätigen, nie wieder fragen"-Modell
+        aus der Spec und skaliert auf 55 Projekte, ohne die Kartenübersicht zuzumüllen. Erreichbar sowohl
+        über die Settings-Sektion (V2 „Details") als auch proaktiv beim ersten Öffnen nach Aktivierung.
+      </div>
+
+      <div class="dialog-mock">
+        <div class="dh">
+          <div class="t">Vault-Zuordnungen bestätigen</div>
+          <div class="s">7 offene Vorschläge · einmalig bestätigen, danach automatisch</div>
+        </div>
+        <div class="db">
+          <div class="match-row high">
+            <div class="mr-main">
+              <div class="mr-proj">niimo-mobile</div>
+              <div class="mr-sub">&rarr; project/niimo-mobile-app.md</div>
+            </div>
+            <span class="mr-conf high">87%</span>
+            <div class="mr-actions">
+              <button class="btn btn-solid btn-sm">✓</button>
+              <button class="btn btn-ghost btn-sm">&#9998;</button>
+            </div>
+          </div>
+          <div class="match-row high">
+            <div class="mr-main">
+              <div class="mr-proj">n3ural-platform</div>
+              <div class="mr-sub">&rarr; project/n3ural-platform.md</div>
+            </div>
+            <span class="mr-conf high">94%</span>
+            <div class="mr-actions">
+              <button class="btn btn-solid btn-sm">✓</button>
+              <button class="btn btn-ghost btn-sm">&#9998;</button>
+            </div>
+          </div>
+          <div class="match-row no-match">
+            <div class="mr-main">
+              <div class="mr-proj">pro-orc-experimental</div>
+              <div class="mr-sub">wird neu angelegt: project/pro-orc-experimental.md</div>
+            </div>
+            <span class="mr-conf new">Neu</span>
+            <div class="mr-actions">
+              <button class="btn btn-solid btn-sm">✓</button>
+              <button class="btn btn-ghost btn-sm">&#9998;</button>
+            </div>
+          </div>
+          <div class="match-row no-match">
+            <div class="mr-main">
+              <div class="mr-proj">vf-security-doc</div>
+              <div class="mr-sub">wird neu angelegt: project/vf-security-doc.md</div>
+            </div>
+            <span class="mr-conf new">Neu</span>
+            <div class="mr-actions">
+              <button class="btn btn-solid btn-sm">✓</button>
+              <button class="btn btn-ghost btn-sm">&#9998;</button>
+            </div>
+          </div>
+          <div style="text-align:center; color:var(--text-dim); font-size:11px; padding-top:6px;">+ 3 weitere</div>
+        </div>
+        <div class="df">
+          <button class="btn btn-ghost btn-sm">Alle Neu-Anlagen bestätigen</button>
+          <button class="btn btn-solid btn-sm">Alle 7 bestätigen</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- V3: Embedded in project detail panel -->
+    <div class="variant">
+      <div class="variant-label">
+        <span class="v-tag">V3</span>
+        <span class="v-name">Eingebettet im Projekt-Detail-Panel</span>
+      </div>
+      <div class="variant-tradeoff">
+        Zuordnung als Teil eines neuen Bereichs im Detail-Panel (evtl. „Vault"-Reiter neben
+        Vision/Roadmap/...). Sauber pro Projekt, aber erfordert erst Klick ins Detail — für 7+ offene
+        Vorschläge auf einmal umständlicher als V2, und würde einen neuen Tab im ohnehin schon
+        6-teiligen Reiter (Vision·Roadmap·Zeitstrahl·Links·Dateien·Token) hinzufügen.
+      </div>
+
+      <div class="detail-panel-mock">
+        <div class="tab-strip">
+          <span class="tab">Vision</span>
+          <span class="tab">Roadmap</span>
+          <span class="tab">Zeitstrahl</span>
+          <span class="tab active">Vault</span>
+          <span class="tab">Dateien</span>
+          <span class="tab">Token</span>
+        </div>
+
+        <div class="field-label">Zugeordneter Hub</div>
+        <div class="row" style="margin-bottom:4px;">
+          <span class="status-pill warn"><span class="dot"></span> Unbestätigt</span>
+        </div>
+        <div class="fake-input" style="margin-bottom:10px;">project/niimo-mobile-app.md (87% Übereinstimmung)</div>
+
+        <div class="row" style="gap:6px;">
+          <button class="btn btn-solid btn-sm">Bestätigen</button>
+          <button class="btn btn-outline btn-sm">Anderen Hub wählen</button>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="row spread">
+          <span style="font-size:12px; color:var(--text-sec);">Letzter Sync: —</span>
+          <button class="btn btn-ghost btn-sm">&#128257; Jetzt synchronisieren</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="footer-note">
+  Mockup-Datei: <code class="inline">docs/design/vault-sync-mockups.html</code> ·
+  Spec: <code class="inline">.a1/learnings/projects/pro-orc/spec/010-vault-status-writer.md</code> ·
+  Kein Implementierungscode — Farben/Abstände approximieren das echte Flutter-Theme (n3_colors.dart),
+  Icons sind Platzhalter-Emoji/Unicode statt lucide_icons_flutter.
+</div>
+
+</body>
+</html>

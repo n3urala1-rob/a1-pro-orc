@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated": "2026-08-23T14:09:15.464Z",
+  "generated": "2026-08-23T19:28:56.117Z",
   "project": {
     "id": "pro-orc",
     "title": "Pro Orc",
@@ -281,8 +281,8 @@
       ],
       "started": null,
       "finished": null,
-      "spec_path": null,
-      "plan_path": null
+      "spec_path": "projects/pro-orc/spec/011-skill-buttons-headless.md",
+      "plan_path": "projects/pro-orc/plans/011-skill-buttons-headless-wave-plan.md"
     }
   ],
   "next": null,

@@ -220,8 +220,8 @@ features:
       - 016-vault-status-writer
     started: null
     finished: null
-    spec_path: null
-    plan_path: null
+    spec_path: projects/pro-orc/spec/011-skill-buttons-headless.md
+    plan_path: projects/pro-orc/plans/011-skill-buttons-headless-wave-plan.md
 next: null
 ---
 
@@ -237,7 +237,6 @@ None.
 
 ## Changelog
 
-- **2026-07-12** — milestone 'm6-learning-loop' added — Surface a1 retros, patterns, and observations as a Learning tab.
 - **2026-07-12** — milestone 'm7-network-costs' added — Full network view, plugin skills, and token cost estimation.
 - **2026-07-12** — milestone 'm8-project-organization' added — Grid/list toggle, custom groups, and a1-SpecForge badge for organizing many projects.
 - **2026-07-12** — feature '002-project-organization' added — Merge Code/Research tabs into one Projects view, group projects by context, add archive group.
@@ -337,6 +336,7 @@ None.
 - **2026-08-23** — 016-vault-status-writer -> merge — stage transition via `product stage`
 - **2026-08-23** — 016-vault-status-writer -> origin-cleanup — stage transition via `product stage`
 - **2026-08-23** — 016-vault-status-writer -> done — stage transition via `product stage`
+- **2026-08-23** — feature.md created for '017-skill-buttons-headless' — formal spec/plan attached via `product feature-init`
 
 ## Appendix — migrated details
 

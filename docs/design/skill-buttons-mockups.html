@@ -1,0 +1,1036 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Pro Orc — Skill-Buttons Headless (Feature 011) — UX-Mockups</title>
+<style>
+  :root {
+    --bg-base: #0E0E14;
+    --bg-surf: #12181F;
+    --bg-elev: #171D26;
+    --bg-card: #1C222B;
+
+    --cyan-hi: #00DEEB;
+    --cyan: #00CDDC;
+    --cyan-lo: #009FAF;
+    --cyan-orb: #00879A;
+
+    --fuch-hi: #FA48FA;
+    --fuch: #D710D8;
+
+    --text-pri: #E0E5EB;
+    --text-sec: #9399A0;
+    --text-dim: #5F6469;
+    --text-dis: #404347;
+
+    --amber-hi: #FFCA28;
+    --amber: #F5B800;
+    --amber-lo: #C49000;
+
+    --emerald-hi: #34D399;
+    --emerald: #00C97A;
+    --emerald-lo: #009E5E;
+
+    --violet-hi: #B28DF5;
+    --violet: #9D68F0;
+
+    --red-hi: #FF6B6B;
+    --red: #F04444;
+    --red-lo: #C22F2F;
+
+    --radius-card: 14px;
+    --radius-sm: 8px;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background:
+      radial-gradient(ellipse 900px 500px at 15% -10%, rgba(0, 135, 154, 0.16), transparent 60%),
+      radial-gradient(ellipse 700px 500px at 100% 10%, rgba(157, 104, 240, 0.08), transparent 55%),
+      var(--bg-base);
+    color: var(--text-pri);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    padding: 40px 32px 120px;
+  }
+
+  .page-header {
+    max-width: 1500px;
+    margin: 0 auto 48px;
+  }
+  .page-header h1 {
+    font-size: 22px;
+    font-weight: 600;
+    margin: 0 0 6px;
+    letter-spacing: -0.01em;
+  }
+  .page-header .meta {
+    color: var(--text-dim);
+    font-size: 12.5px;
+    font-family: "SF Mono", Menlo, monospace;
+  }
+  .page-header p.lead {
+    color: var(--text-sec);
+    max-width: 800px;
+    margin: 14px 0 0;
+    font-size: 13.5px;
+  }
+
+  .surface-section {
+    max-width: 1500px;
+    margin: 0 auto 64px;
+  }
+  .surface-section > h2 {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-pri);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0 0 4px;
+  }
+  .surface-section > h2 .badge {
+    font-size: 10.5px;
+    font-weight: 600;
+    color: var(--cyan);
+    background: rgba(0, 205, 220, 0.12);
+    border: 1px solid rgba(0, 205, 220, 0.3);
+    border-radius: 5px;
+    padding: 2px 7px;
+    letter-spacing: 0.03em;
+  }
+  .surface-section > p.desc {
+    color: var(--text-dim);
+    font-size: 12.5px;
+    margin: 6px 0 22px;
+    max-width: 820px;
+  }
+
+  .variant-block {
+    margin-bottom: 40px;
+  }
+  .variant-label {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .variant-label .v-tag {
+    font-family: "SF Mono", Menlo, monospace;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--bg-base);
+    background: var(--cyan);
+    border-radius: 5px;
+    padding: 2px 7px;
+  }
+  .variant-label .v-tag.recommended {
+    background: var(--emerald);
+  }
+  .variant-label .v-name {
+    font-size: 14.5px;
+    font-weight: 600;
+    color: var(--text-pri);
+  }
+  .variant-tradeoff {
+    color: var(--text-dim);
+    font-size: 12px;
+    margin: 6px 2px 16px;
+    line-height: 1.5;
+    max-width: 900px;
+  }
+  .variant-tradeoff .rec-tag {
+    color: var(--emerald-hi);
+    font-weight: 600;
+  }
+
+  .state-row {
+    display: flex;
+    gap: 18px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .state-col {
+    flex: 1 1 320px;
+    max-width: 380px;
+    min-width: 300px;
+  }
+  .state-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    border-radius: 5px;
+    padding: 3px 8px;
+    margin-bottom: 8px;
+  }
+  .state-tag.idle { color: var(--text-sec); background: rgba(255,255,255,0.06); }
+  .state-tag.running { color: var(--cyan-hi); background: rgba(0,205,220,0.12); }
+  .state-tag.finished { color: var(--emerald-hi); background: rgba(0,201,122,0.12); }
+  .state-tag.failed { color: var(--red-hi); background: rgba(240,68,68,0.12); }
+
+  /* ---- glass card, mirrors GlassCard widget ---- */
+  .glass-card {
+    background: rgba(28, 34, 43, 0.55);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: var(--radius-card);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255,255,255,0.03);
+    padding: 16px;
+  }
+
+  .detail-panel-mock {
+    background: var(--bg-surf);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 12px;
+    padding: 16px;
+  }
+  .tab-strip {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 14px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    padding-bottom: 0;
+  }
+  .tab-strip .tab {
+    font-size: 11.5px;
+    color: var(--text-dim);
+    padding: 6px 10px;
+    border-bottom: 2px solid transparent;
+  }
+  .tab-strip .tab.active { color: var(--cyan); border-bottom-color: var(--cyan); }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 2px;
+  }
+  .section-header .icon {
+    width: 18px;
+    height: 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--amber);
+    font-size: 15px;
+  }
+  .section-header .title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-pri);
+  }
+  .section-subtitle {
+    color: var(--text-dim);
+    font-size: 11px;
+    margin: 4px 0 12px;
+  }
+
+  .row { display: flex; align-items: center; gap: 8px; }
+  .row.spread { justify-content: space-between; }
+  .grow { flex: 1; min-width: 0; }
+  .wrap { flex-wrap: wrap; }
+
+  .divider {
+    height: 1px;
+    background: rgba(255,255,255,0.06);
+    margin: 12px 0;
+  }
+
+  /* ---- quick action icon buttons (mirrors _QuickActionButton) ---- */
+  .qa-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .qa-btn {
+    width: 64px;
+    height: 52px;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    background: transparent;
+    cursor: default;
+  }
+  .qa-btn .qa-icon { font-size: 16px; color: var(--text-dim); }
+  .qa-btn .qa-label { font-size: 9.5px; font-weight: 300; color: var(--text-dim); text-align: center; }
+
+  /* ---- skill buttons: visually distinct via amber accent border ---- */
+  .skill-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    min-width: 88px;
+    height: 52px;
+    padding: 0 10px;
+    border-radius: 8px;
+    border: 1px solid rgba(245, 184, 0, 0.28);
+    background: rgba(245, 184, 0, 0.06);
+    cursor: default;
+  }
+  .skill-btn .qa-icon { color: var(--amber); font-size: 15px; }
+  .skill-btn .qa-label { color: var(--amber-hi); font-size: 10px; font-weight: 500; }
+  .skill-btn.disabled { opacity: 0.4; }
+  .skill-btn.running {
+    border-color: rgba(0, 205, 220, 0.4);
+    background: rgba(0, 205, 220, 0.08);
+  }
+  .skill-btn.running .qa-icon, .skill-btn.running .qa-label { color: var(--cyan-hi); }
+
+  .skills-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--amber);
+    margin-bottom: 8px;
+  }
+  .skills-label .cost-note {
+    font-size: 9.5px;
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: 0;
+    color: var(--text-dim);
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12.5px;
+    font-weight: 500;
+    border-radius: var(--radius-sm);
+    padding: 8px 13px;
+    cursor: default;
+    border: 1px solid transparent;
+    white-space: nowrap;
+  }
+  .btn-text { color: var(--cyan); background: transparent; padding: 8px 10px; }
+  .btn-outline { color: var(--cyan); border-color: rgba(0,205,220,0.3); background: transparent; }
+  .btn-solid { color: var(--bg-base); background: var(--cyan); font-weight: 600; }
+  .btn-ghost { color: var(--text-sec); background: rgba(255,255,255,0.04); }
+  .btn-danger { color: var(--red-hi); border-color: rgba(240,68,68,0.35); background: rgba(240,68,68,0.08); }
+  .btn-sm { padding: 5px 9px; font-size: 11.5px; }
+
+  .status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    font-weight: 600;
+    border-radius: 6px;
+    padding: 3px 8px;
+  }
+  .status-pill.ok { color: var(--emerald-hi); background: rgba(0,201,122,0.12); }
+  .status-pill.warn { color: var(--amber-hi); background: rgba(245,184,0,0.12); }
+  .status-pill.err { color: var(--red-hi); background: rgba(240,68,68,0.12); }
+  .status-pill.info { color: var(--cyan-hi); background: rgba(0,205,220,0.12); }
+  .status-pill.dim { color: var(--text-dim); background: rgba(255,255,255,0.04); }
+  .status-pill .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .status-pill .dot.pulse { animation: pulse 1.4s ease-in-out infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
+
+  .spinner {
+    width: 13px; height: 13px;
+    border-radius: 50%;
+    border: 2px solid rgba(0,205,220,0.25);
+    border-top-color: var(--cyan-hi);
+    display: inline-block;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .progress-track {
+    height: 4px;
+    border-radius: 3px;
+    background: rgba(255,255,255,0.07);
+    overflow: hidden;
+    margin: 8px 0;
+  }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, var(--cyan-lo), var(--cyan)); border-radius: 3px; }
+  .progress-fill.indeterminate {
+    width: 40%;
+    animation: indet 1.3s ease-in-out infinite;
+  }
+  @keyframes indet {
+    0% { margin-left: 0%; }
+    50% { margin-left: 60%; }
+    100% { margin-left: 0%; }
+  }
+
+  .status-line {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11.5px;
+    color: var(--text-sec);
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255,255,255,0.06);
+  }
+  .status-line b { color: var(--text-pri); font-weight: 600; }
+
+  .run-card {
+    background: rgba(255,255,255,0.025);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 10px;
+    padding: 12px;
+    margin-top: 10px;
+  }
+  .run-card.running { border-color: rgba(0,205,220,0.25); background: rgba(0,205,220,0.04); }
+  .run-card.finished { border-color: rgba(0,201,122,0.2); background: rgba(0,201,122,0.03); }
+  .run-card.failed { border-color: rgba(240,68,68,0.25); background: rgba(240,68,68,0.04); }
+  .run-card .rc-title { font-size: 12.5px; font-weight: 600; color: var(--text-pri); }
+  .run-card .rc-sub { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
+
+  .collapsible {
+    margin-top: 8px;
+    border-radius: 8px;
+    border: 1px solid rgba(240,68,68,0.2);
+    background: rgba(240,68,68,0.04);
+    overflow: hidden;
+  }
+  .collapsible .ch {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 10px;
+    font-size: 11.5px;
+    color: var(--red-hi);
+    cursor: default;
+  }
+  .collapsible .cb {
+    padding: 0 10px 10px;
+    font-family: "SF Mono", Menlo, monospace;
+    font-size: 10.5px;
+    color: var(--text-sec);
+    line-height: 1.5;
+    white-space: pre-wrap;
+    max-height: 90px;
+    overflow-y: auto;
+  }
+
+  .result-inline {
+    margin-top: 8px;
+    border-radius: 8px;
+    border: 1px solid rgba(0,201,122,0.2);
+    background: rgba(0,201,122,0.03);
+    overflow: hidden;
+  }
+  .result-inline .rh {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 10px;
+    font-size: 11.5px;
+    color: var(--emerald-hi);
+    cursor: default;
+  }
+  .result-inline .rb {
+    padding: 0 12px 12px;
+    font-size: 11.5px;
+    color: var(--text-sec);
+    line-height: 1.55;
+    max-height: 160px;
+    overflow-y: auto;
+    border-top: 1px solid rgba(0,201,122,0.12);
+    margin-top: 4px;
+    padding-top: 8px;
+  }
+  .result-inline .rb h4 { color: var(--text-pri); font-size: 12px; margin: 0 0 6px; }
+  .result-inline .rb code { font-family: "SF Mono", Menlo, monospace; background: rgba(255,255,255,0.05); padding: 1px 4px; border-radius: 3px; }
+
+  .dialog-mock {
+    background: var(--bg-surf);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 14px;
+    padding: 0;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.55);
+  }
+  .dialog-mock .dh {
+    padding: 14px 16px 10px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+  .dialog-mock .dh .t { font-size: 14px; font-weight: 600; color: var(--text-pri); }
+  .dialog-mock .dh .s { font-size: 11px; color: var(--text-dim); margin-top: 3px; }
+  .dialog-mock .dh .close { color: var(--text-dim); font-size: 14px; }
+  .dialog-mock .db { padding: 12px 16px; max-height: 220px; overflow: hidden; font-size: 11.5px; color: var(--text-sec); line-height: 1.6; }
+  .dialog-mock .df { padding: 10px 16px 14px; display: flex; justify-content: flex-end; gap: 8px; border-top: 1px solid rgba(255,255,255,0.06); }
+
+  .popover {
+    background: var(--bg-elev);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 10px;
+    padding: 12px;
+    margin-top: 8px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    font-size: 12px;
+    max-width: 320px;
+  }
+
+  code.inline {
+    font-family: "SF Mono", Menlo, monospace;
+    background: rgba(255,255,255,0.06);
+    border-radius: 4px;
+    padding: 1px 5px;
+    font-size: 11px;
+    color: var(--cyan-hi);
+  }
+
+  .sub-option {
+    margin-top: 28px;
+    padding-top: 20px;
+    border-top: 1px dashed rgba(255,255,255,0.1);
+  }
+  .sub-option-label {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--violet-hi);
+    margin-bottom: 4px;
+  }
+  .sub-option-desc {
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-bottom: 16px;
+    max-width: 820px;
+  }
+
+  .footer-note {
+    max-width: 1500px;
+    margin: 60px auto 0;
+    padding-top: 24px;
+    border-top: 1px solid rgba(255,255,255,0.07);
+    color: var(--text-dim);
+    font-size: 11.5px;
+  }
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <h1>Skill-Buttons Headless — UX-Mockups (Feature 011 / M12)</h1>
+  <div class="meta">Pro Orc · macOS Menubar App · Dark Glassmorphism · 2026-08-23</div>
+  <p class="lead">
+    Eine UI-Fläche — das Detail-Panel des Projekts, <b>Vision-Tab</b>, direkt neben den bestehenden
+    Quick-Actions (<code class="inline">QuickActionsSection</code>) — mit vier zu gestaltenden Zuständen:
+    <b>Idle</b>, <b>Running</b>, <b>Finished</b>, <b>Failed</b>. Drei Anordnungs-Varianten unten, jede
+    deckt alle vier Zustände ab. Kein Implementierungscode — Farben/Abstände approximieren das echte
+    Flutter-Theme (<code class="inline">n3_colors.dart</code>), Icons sind Platzhalter-Emoji statt
+    lucide_icons_flutter.
+  </p>
+</div>
+
+<!-- ============================================================ -->
+<!-- V1 -->
+<!-- ============================================================ -->
+<div class="surface-section">
+  <h2>V1 <span class="badge">Inline in bestehender Quick-Actions-Zeile + Status darunter</span></h2>
+  <p class="desc">
+    Die 2-3 Skill-Buttons reihen sich direkt in die bestehende Icon-Button-Reihe ein (gleiche
+    64×52px-Kachel wie „Öffnen"/„Sync"), aber mit Amber-Akzent-Rahmen statt Standard-Grau — signalisiert
+    „das kostet Geld/Minuten" ohne einen zweiten visuellen Block zu brauchen. Eine einzelne Statuszeile
+    darunter zeigt den Zustand des zuletzt/aktuell laufenden Skills.
+  </p>
+
+  <div class="variant-tradeoff">
+    Kompaktester Footprint, keine neue Card-Grenze im Panel. Nachteil: bei „Failed" mit aufgeklapptem
+    Fehler-Block wird die Quick-Actions-Zeile durch einen darunterhängenden Bereich optisch unruhig, und
+    bei mehreren Skills mit eigenem „letzter Lauf"-Status wird die einzelne Statuszeile schnell eng.
+  </div>
+
+  <div class="state-row">
+
+    <div class="state-col">
+      <span class="state-tag idle">1 · Idle</span>
+      <div class="detail-panel-mock">
+        <div class="tab-strip">
+          <span class="tab active">Vision</span>
+          <span class="tab">Roadmap</span>
+          <span class="tab">Zeitstrahl</span>
+          <span class="tab">Links</span>
+          <span class="tab">Dateien</span>
+          <span class="tab">Token</span>
+        </div>
+        <div class="qa-row">
+          <div class="qa-btn"><span class="qa-icon">&#9998;</span><span class="qa-label">Öffnen</span></div>
+          <div class="qa-btn"><span class="qa-icon">&#128257;</span><span class="qa-label">Sync</span></div>
+          <div class="skill-btn"><span class="qa-icon">&#128202;</span><span class="qa-label">a1-progress</span></div>
+          <div class="skill-btn"><span class="qa-icon">&#9989;</span><span class="qa-label">Checkpoint</span></div>
+        </div>
+        <div class="status-line">
+          <span style="color:var(--text-dim);">a1-progress: noch nicht ausgeführt · Checkpoint: noch nicht ausgeführt</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="state-col">
+      <span class="state-tag running">2 · Running</span>
+      <div class="detail-panel-mock">
+        <div class="tab-strip">
+          <span class="tab active">Vision</span>
+          <span class="tab">Roadmap</span>
+          <span class="tab">Zeitstrahl</span>
+          <span class="tab">Links</span>
+          <span class="tab">Dateien</span>
+          <span class="tab">Token</span>
+        </div>
+        <div class="qa-row">
+          <div class="qa-btn"><span class="qa-icon">&#9998;</span><span class="qa-label">Öffnen</span></div>
+          <div class="qa-btn"><span class="qa-icon">&#128257;</span><span class="qa-label">Sync</span></div>
+          <div class="skill-btn running"><span class="spinner"></span><span class="qa-label">läuft…</span></div>
+          <div class="skill-btn disabled"><span class="qa-icon">&#9989;</span><span class="qa-label">Checkpoint</span></div>
+        </div>
+        <div class="status-line" style="justify-content:space-between;">
+          <span><span class="spinner" style="margin-right:6px;"></span><b>a1-progress</b> läuft seit 2:14</span>
+          <button class="btn btn-danger btn-sm">Abbrechen</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="state-col">
+      <span class="state-tag finished">3 · Finished</span>
+      <div class="detail-panel-mock">
+        <div class="tab-strip">
+          <span class="tab active">Vision</span>
+          <span class="tab">Roadmap</span>
+          <span class="tab">Zeitstrahl</span>
+          <span class="tab">Links</span>
+          <span class="tab">Dateien</span>
+          <span class="tab">Token</span>
+        </div>
+        <div class="qa-row">
+          <div class="qa-btn"><span class="qa-icon">&#9998;</span><span class="qa-label">Öffnen</span></div>
+          <div class="qa-btn"><span class="qa-icon">&#128257;</span><span class="qa-label">Sync</span></div>
+          <div class="skill-btn"><span class="qa-icon">&#128202;</span><span class="qa-label">a1-progress</span></div>
+          <div class="skill-btn"><span class="qa-icon">&#9989;</span><span class="qa-label">Checkpoint</span></div>
+        </div>
+        <div class="status-line" style="justify-content:space-between;">
+          <span class="status-pill ok"><span class="dot"></span> a1-progress: vor 4 Min · erfolgreich</span>
+          <button class="btn btn-text btn-sm">Ergebnis anzeigen &rarr;</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="state-col">
+      <span class="state-tag failed">4 · Failed</span>
+      <div class="detail-panel-mock">
+        <div class="tab-strip">
+          <span class="tab active">Vision</span>
+          <span class="tab">Roadmap</span>
+          <span class="tab">Zeitstrahl</span>
+          <span class="tab">Links</span>
+          <span class="tab">Dateien</span>
+          <span class="tab">Token</span>
+        </div>
+        <div class="qa-row">
+          <div class="qa-btn"><span class="qa-icon">&#9998;</span><span class="qa-label">Öffnen</span></div>
+          <div class="qa-btn"><span class="qa-icon">&#128257;</span><span class="qa-label">Sync</span></div>
+          <div class="skill-btn"><span class="qa-icon">&#128202;</span><span class="qa-label">a1-progress</span></div>
+          <div class="skill-btn"><span class="qa-icon">&#9989;</span><span class="qa-label">Checkpoint</span></div>
+        </div>
+        <div class="status-line" style="justify-content:space-between;">
+          <span class="status-pill err"><span class="dot"></span> Checkpoint: vor 1 Min · fehlgeschlagen</span>
+          <button class="btn btn-text btn-sm">Erneut versuchen</button>
+        </div>
+        <div class="collapsible">
+          <div class="ch"><span>&#9660; Fehlerdetails anzeigen</span><span>claude: exit 1</span></div>
+          <div class="cb">Error: Rate limit exceeded (429). Retry after 60s.
+  at ClaudeProcessRunner.run (process_runner.dart:118)
+  at HeadlessSkillService.execute (headless_skill_service.dart:64)</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- V2 — RECOMMENDED -->
+<!-- ============================================================ -->
+<div class="surface-section">
+  <h2>V2 <span class="badge">Eigene „Claude-Skills"-GlassCard-Sektion</span></h2>
+  <p class="desc">
+    Skill-Buttons und ihr Status bekommen eine eigene, klar betitelte GlassCard-Sektion im Vision-Tab
+    — unterhalb der bestehenden Quick-Actions-Zeile, nicht darin verschmolzen. Persistenter
+    Statusbereich pro Skill (nicht nur eine einzelne Zeile), damit „a1-progress" und „Checkpoint"
+    unabhängig ihren letzten Lauf zeigen können.
+  </p>
+
+  <div class="variant-tradeoff">
+    <span class="rec-tag">Empfehlung.</span> Klarste Trennung „normale Projekt-Aktionen" (sofort, billig,
+    lokal) vs. „Claude-Skill-Läufe" (Minuten, kostenpflichtig, LLM-Prozess) — die Sektionsüberschrift
+    „Claude-Skills" mit Kosten-Hinweis macht diesen Unterschied für Robert auf einen Blick klar, ohne
+    dass er die Amber-Randfarbe erst lernen muss. Skaliert sauber auf 2-3 Skills mit je eigenem
+    Status/Fehler-Block. Etwas mehr vertikaler Platz als V1, aber im Vision-Tab (der ohnehin freien Raum
+    unter den Quick-Actions hat) unkritisch.
+  </div>
+
+  <div class="state-row">
+
+    <div class="state-col">
+      <span class="state-tag idle">1 · Idle</span>
+      <div class="detail-panel-mock">
+        <div class="tab-strip">
+          <span class="tab active">Vision</span>
+          <span class="tab">Roadmap</span>
+          <span class="tab">Zeitstrahl</span>
+          <span class="tab">Links</span>
+          <span class="tab">Dateien</span>
+          <span class="tab">Token</span>
+        </div>
+        <div class="qa-row" style="margin-bottom:14px;">
+          <div class="qa-btn"><span class="qa-icon">&#9998;</span><span class="qa-label">Öffnen</span></div>
+          <div class="qa-btn"><span class="qa-icon">&#128257;</span><span class="qa-label">Sync</span></div>
+          <div class="qa-btn"><span class="qa-icon">&#9889;</span><span class="qa-label">Mit Skill</span></div>
+        </div>
+
+        <div class="glass-card" style="padding:12px 14px;">
+          <div class="skills-label">
+            <span>&#9889; Claude-Skills</span>
+            <span class="cost-note">— kostet Zeit &amp; Budget</span>
+          </div>
+          <div class="qa-row">
+            <div class="skill-btn"><span class="qa-icon">&#128202;</span><span class="qa-label">a1-progress</span></div>
+            <div class="skill-btn"><span class="qa-icon">&#9989;</span><span class="qa-label">Checkpoint</span></div>
+          </div>
+          <div style="margin-top:10px; font-size:11px; color:var(--text-dim);">
+            a1-progress: noch nicht ausgeführt<br/>
+            Checkpoint: noch nicht ausgeführt
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="state-col">
+      <span class="state-tag running">2 · Running</span>
+      <div class="detail-panel-mock">
+        <div class="tab-strip">
+          <span class="tab active">Vision</span>
+          <span class="tab">Roadmap</span>
+          <span class="tab">Zeitstrahl</span>
+          <span class="tab">Links</span>
+          <span class="tab">Dateien</span>
+          <span class="tab">Token</span>
+        </div>
+        <div class="qa-row" style="margin-bottom:14px;">
+          <div class="qa-btn"><span class="qa-icon">&#9998;</span><span class="qa-label">Öffnen</span></div>
+          <div class="qa-btn"><span class="qa-icon">&#128257;</span><span class="qa-label">Sync</span></div>
+          <div class="qa-btn"><span class="qa-icon">&#9889;</span><span class="qa-label">Mit Skill</span></div>
+        </div>
+
+        <div class="glass-card" style="padding:12px 14px;">
+          <div class="skills-label">
+            <span>&#9889; Claude-Skills</span>
+          </div>
+          <div class="qa-row">
+            <div class="skill-btn running"><span class="spinner"></span><span class="qa-label">a1-progress</span></div>
+            <div class="skill-btn disabled"><span class="qa-icon">&#9989;</span><span class="qa-label">Checkpoint</span></div>
+          </div>
+          <div class="run-card running">
+            <div class="row spread">
+              <div class="rc-title"><span class="spinner" style="margin-right:6px;"></span>a1-progress läuft</div>
+              <button class="btn btn-danger btn-sm">Abbrechen</button>
+            </div>
+            <div class="rc-sub">Gestartet vor 2:14 · Limit 10:00</div>
+            <div class="progress-track"><div class="progress-fill indeterminate"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="state-col">
+      <span class="state-tag finished">3 · Finished</span>
+      <div class="detail-panel-mock">
+        <div class="tab-strip">
+          <span class="tab active">Vision</span>
+          <span class="tab">Roadmap</span>
+          <span class="tab">Zeitstrahl</span>
+          <span class="tab">Links</span>
+          <span class="tab">Dateien</span>
+          <span class="tab">Token</span>
+        </div>
+        <div class="qa-row" style="margin-bottom:14px;">
+          <div class="qa-btn"><span class="qa-icon">&#9998;</span><span class="qa-label">Öffnen</span></div>
+          <div class="qa-btn"><span class="qa-icon">&#128257;</span><span class="qa-label">Sync</span></div>
+          <div class="qa-btn"><span class="qa-icon">&#9889;</span><span class="qa-label">Mit Skill</span></div>
+        </div>
+
+        <div class="glass-card" style="padding:12px 14px;">
+          <div class="skills-label">
+            <span>&#9889; Claude-Skills</span>
+          </div>
+          <div class="qa-row">
+            <div class="skill-btn"><span class="qa-icon">&#128202;</span><span class="qa-label">a1-progress</span></div>
+            <div class="skill-btn"><span class="qa-icon">&#9989;</span><span class="qa-label">Checkpoint</span></div>
+          </div>
+          <div class="run-card finished">
+            <div class="row spread">
+              <div class="rc-title"><span class="status-pill ok"><span class="dot"></span> a1-progress</span></div>
+              <span style="font-size:11px; color:var(--text-dim);">vor 4 Min</span>
+            </div>
+            <div class="result-inline" style="margin-top:8px;">
+              <div class="rh"><span>&#9660; Ergebnis anzeigen</span><span>&#128196;</span></div>
+              <div class="rb">
+                <h4>Fortschritt: Phase 12 — 78%</h4>
+                8 von 10 Plan-Items abgeschlossen. Offen: <code>PLAN-09</code>, <code>PLAN-10</code>.
+                Letzter Commit vor 40 Min. Auch geschrieben nach <code>project/pro-orc.md</code> im Vault.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="state-col">
+      <span class="state-tag failed">4 · Failed</span>
+      <div class="detail-panel-mock">
+        <div class="tab-strip">
+          <span class="tab active">Vision</span>
+          <span class="tab">Roadmap</span>
+          <span class="tab">Zeitstrahl</span>
+          <span class="tab">Links</span>
+          <span class="tab">Dateien</span>
+          <span class="tab">Token</span>
+        </div>
+        <div class="qa-row" style="margin-bottom:14px;">
+          <div class="qa-btn"><span class="qa-icon">&#9998;</span><span class="qa-label">Öffnen</span></div>
+          <div class="qa-btn"><span class="qa-icon">&#128257;</span><span class="qa-label">Sync</span></div>
+          <div class="qa-btn"><span class="qa-icon">&#9889;</span><span class="qa-label">Mit Skill</span></div>
+        </div>
+
+        <div class="glass-card" style="padding:12px 14px;">
+          <div class="skills-label">
+            <span>&#9889; Claude-Skills</span>
+          </div>
+          <div class="qa-row">
+            <div class="skill-btn"><span class="qa-icon">&#128202;</span><span class="qa-label">a1-progress</span></div>
+            <div class="skill-btn"><span class="qa-icon">&#9989;</span><span class="qa-label">Checkpoint</span></div>
+          </div>
+          <div class="run-card failed">
+            <div class="row spread">
+              <div class="rc-title"><span class="status-pill err"><span class="dot"></span> Checkpoint</span></div>
+              <span style="font-size:11px; color:var(--text-dim);">vor 1 Min · fehlgeschlagen</span>
+            </div>
+            <div class="collapsible">
+              <div class="ch"><span>&#9660; Fehlerdetails anzeigen</span><span>claude: exit 1</span></div>
+              <div class="cb">Error: `claude` CLI nicht authentifiziert.
+Bitte `claude login` im Terminal ausführen und erneut versuchen.</div>
+            </div>
+            <div class="row" style="margin-top:8px;">
+              <button class="btn btn-outline btn-sm">Erneut versuchen</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="sub-option">
+    <div class="sub-option-label">Sub-Option — Ergebnis-Viewer: Inline-Expand (oben gezeigt)</div>
+    <div class="sub-option-desc">
+      Ergebnis klappt direkt im Run-Card-Bereich auf (siehe „3 · Finished" oben). Kein Kontextwechsel,
+      bleibt im selben Scroll-Fluss wie die anderen Tabs. Bei langen Markdown-Ergebnissen (z.B. viel
+      Text von a1-progress) wird der Card-Bereich aber schnell hoch — <code class="inline">max-height</code>
+      mit internem Scroll begrenzt das, fühlt sich bei sehr langen Ergebnissen aber gequetscht an.
+    </div>
+  </div>
+
+  <div class="sub-option">
+    <div class="sub-option-label">Sub-Option — Ergebnis-Viewer: GlassDialog (Alternative)</div>
+    <div class="sub-option-desc">
+      „Ergebnis anzeigen" öffnet stattdessen einen GlassDialog mit vollem Markdown-Rendering und eigenem
+      Scroll-Bereich — mehr Platz, konsistent mit anderen Ergebnis-/Bestätigungs-Dialogen im Projekt
+      (z.B. Vault-Zuordnungs-Dialog aus Feature 010), aber ein zusätzlicher Klick/Kontextwechsel für den
+      häufigen Fall „kurz reinschauen".
+    </div>
+    <div class="dialog-mock" style="max-width:460px;">
+      <div class="dh">
+        <div>
+          <div class="t">a1-progress — Ergebnis</div>
+          <div class="s">pro-orc · abgeschlossen vor 4 Min · erfolgreich</div>
+        </div>
+        <span class="close">&#10005;</span>
+      </div>
+      <div class="db">
+        <b style="color:var(--text-pri);">Fortschritt: Phase 12 — 78%</b><br/><br/>
+        8 von 10 Plan-Items abgeschlossen. Offen: <code class="inline">PLAN-09</code>,
+        <code class="inline">PLAN-10</code>. Letzter Commit vor 40 Min.<br/><br/>
+        Auch geschrieben nach <code class="inline">project/pro-orc.md</code> im Vault.
+      </div>
+      <div class="df">
+        <button class="btn btn-ghost btn-sm">Im Vault öffnen</button>
+        <button class="btn btn-solid btn-sm">Schließen</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- V3 -->
+<!-- ============================================================ -->
+<div class="surface-section">
+  <h2>V3 <span class="badge">Kompakte Button-Gruppe mit Status-Popover</span></h2>
+  <p class="desc">
+    Die Skill-Buttons bleiben so klein wie möglich (nur Icon + Kurzlabel, keine eigene Card) — Status,
+    Fehler und Ergebnis erscheinen ausschließlich in einem Popover, das beim Hover/Klick auf den
+    jeweiligen Skill-Button erscheint. Maximal platzsparend im Ruhezustand.
+  </p>
+
+  <div class="variant-tradeoff">
+    Spart am meisten vertikalen Raum, solange kein Skill läuft oder fehlgeschlagen ist. Nachteil: der
+    Running- und Failed-Zustand (der am längsten sichtbar bleiben muss — Minuten lang bzw. bis Robert
+    reagiert) ist nur über Hover/Klick erreichbar statt permanent sichtbar — riskiert, dass ein
+    laufender oder fehlgeschlagener Skill übersehen wird, was der Spec-Anforderung „jederzeit sichtbarer
+    Abbrechen-Button" (FR-005) eher entgegenläuft. Nur empfehlenswert, falls Robert explizit einen noch
+    kompakteren Ruhezustand gegenüber V2 bevorzugt.
+  </div>
+
+  <div class="state-row">
+
+    <div class="state-col">
+      <span class="state-tag idle">1 · Idle</span>
+      <div class="detail-panel-mock">
+        <div class="tab-strip">
+          <span class="tab active">Vision</span>
+          <span class="tab">Roadmap</span>
+          <span class="tab">Zeitstrahl</span>
+          <span class="tab">Links</span>
+          <span class="tab">Dateien</span>
+          <span class="tab">Token</span>
+        </div>
+        <div class="qa-row">
+          <div class="qa-btn"><span class="qa-icon">&#9998;</span><span class="qa-label">Öffnen</span></div>
+          <div class="qa-btn"><span class="qa-icon">&#128257;</span><span class="qa-label">Sync</span></div>
+          <div class="skill-btn" style="min-width:auto; width:52px;"><span class="qa-icon">&#128202;</span></div>
+          <div class="skill-btn" style="min-width:auto; width:52px;"><span class="qa-icon">&#9989;</span></div>
+        </div>
+        <div style="font-size:10.5px; color:var(--text-dis); margin-top:6px;">Hover für Status</div>
+      </div>
+    </div>
+
+    <div class="state-col">
+      <span class="state-tag running">2 · Running</span>
+      <div class="detail-panel-mock">
+        <div class="tab-strip">
+          <span class="tab active">Vision</span>
+          <span class="tab">Roadmap</span>
+          <span class="tab">Zeitstrahl</span>
+          <span class="tab">Links</span>
+          <span class="tab">Dateien</span>
+          <span class="tab">Token</span>
+        </div>
+        <div class="qa-row">
+          <div class="qa-btn"><span class="qa-icon">&#9998;</span><span class="qa-label">Öffnen</span></div>
+          <div class="qa-btn"><span class="qa-icon">&#128257;</span><span class="qa-label">Sync</span></div>
+          <div class="skill-btn running" style="min-width:auto; width:52px;"><span class="spinner"></span></div>
+          <div class="skill-btn disabled" style="min-width:auto; width:52px;"><span class="qa-icon">&#9989;</span></div>
+        </div>
+        <div class="popover" style="max-width:260px;">
+          <div class="row spread" style="margin-bottom:6px;">
+            <span style="color:var(--text-pri); font-weight:600;">a1-progress läuft</span>
+            <span class="spinner"></span>
+          </div>
+          <div style="color:var(--text-dim); font-size:11px; margin-bottom:10px;">seit 2:14 · Limit 10:00</div>
+          <button class="btn btn-danger btn-sm" style="width:100%; justify-content:center;">Abbrechen</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="state-col">
+      <span class="state-tag finished">3 · Finished</span>
+      <div class="detail-panel-mock">
+        <div class="tab-strip">
+          <span class="tab active">Vision</span>
+          <span class="tab">Roadmap</span>
+          <span class="tab">Zeitstrahl</span>
+          <span class="tab">Links</span>
+          <span class="tab">Dateien</span>
+          <span class="tab">Token</span>
+        </div>
+        <div class="qa-row">
+          <div class="qa-btn"><span class="qa-icon">&#9998;</span><span class="qa-label">Öffnen</span></div>
+          <div class="qa-btn"><span class="qa-icon">&#128257;</span><span class="qa-label">Sync</span></div>
+          <div class="skill-btn" style="min-width:auto; width:52px; position:relative;">
+            <span class="qa-icon">&#128202;</span>
+            <span style="position:absolute; top:4px; right:4px; width:6px; height:6px; border-radius:50%; background:var(--emerald-hi);"></span>
+          </div>
+          <div class="skill-btn" style="min-width:auto; width:52px;"><span class="qa-icon">&#9989;</span></div>
+        </div>
+        <div class="popover" style="max-width:280px;">
+          <div class="status-pill ok" style="margin-bottom:8px;"><span class="dot"></span> erfolgreich · vor 4 Min</div>
+          <div style="color:var(--text-sec); font-size:11.5px; margin-bottom:10px;">
+            Fortschritt: Phase 12 — 78%. 8/10 Plan-Items abgeschlossen.
+          </div>
+          <button class="btn btn-text btn-sm" style="padding-left:0;">Vollständiges Ergebnis &rarr;</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="state-col">
+      <span class="state-tag failed">4 · Failed</span>
+      <div class="detail-panel-mock">
+        <div class="tab-strip">
+          <span class="tab active">Vision</span>
+          <span class="tab">Roadmap</span>
+          <span class="tab">Zeitstrahl</span>
+          <span class="tab">Links</span>
+          <span class="tab">Dateien</span>
+          <span class="tab">Token</span>
+        </div>
+        <div class="qa-row">
+          <div class="qa-btn"><span class="qa-icon">&#9998;</span><span class="qa-label">Öffnen</span></div>
+          <div class="qa-btn"><span class="qa-icon">&#128257;</span><span class="qa-label">Sync</span></div>
+          <div class="skill-btn" style="min-width:auto; width:52px;"><span class="qa-icon">&#128202;</span></div>
+          <div class="skill-btn" style="min-width:auto; width:52px; border-color:rgba(240,68,68,0.4); background:rgba(240,68,68,0.08); position:relative;">
+            <span class="qa-icon" style="color:var(--red-hi);">&#9989;</span>
+            <span style="position:absolute; top:4px; right:4px; width:6px; height:6px; border-radius:50%; background:var(--red-hi);"></span>
+          </div>
+        </div>
+        <div class="popover" style="max-width:280px;">
+          <div class="status-pill err" style="margin-bottom:8px;"><span class="dot"></span> fehlgeschlagen · vor 1 Min</div>
+          <div class="collapsible" style="margin-top:0;">
+            <div class="ch"><span>&#9660; Fehlerdetails</span></div>
+            <div class="cb">Error: `claude` CLI nicht authentifiziert.</div>
+          </div>
+          <button class="btn btn-outline btn-sm" style="width:100%; justify-content:center; margin-top:8px;">Erneut versuchen</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="footer-note">
+  Mockup-Datei: <code class="inline">docs/design/skill-buttons-mockups.html</code> ·
+  Spec: <code class="inline">.a1/learnings/projects/pro-orc/spec/011-skill-buttons-headless.md</code> ·
+  Referenziert bestehende Struktur aus <code class="inline">quick_actions_section.dart</code> (64×52px
+  Icon-Kachel-Muster) und Farbtokens aus <code class="inline">n3_colors.dart</code>. Amber
+  (<code class="inline">#F5B800</code>/<code class="inline">#FFCA28</code>) ist im echten Theme bereits
+  als „Skills-Akzent" reserviert (siehe <code class="inline">AppColors.amber*</code>) — daher hier für
+  die Skill-Button-Differenzierung wiederverwendet statt einer neuen Farbe. Kein Implementierungscode —
+  dient als Klick-Vorlage für a1-walter.
+</div>
+
+</body>
+</html>

@@ -635,6 +635,74 @@ orphaned content
         expect(content, contains('Original.'));
       },
     );
+
+    test(
+      'a failed rename() leaves no leftover tmp file (N-1, review nit round)',
+      () async {
+        // Force a rename failure by making the target path a DIRECTORY
+        // instead of a file — File.exists() correctly returns false for a
+        // directory path, so write() takes the auto-create path, builds
+        // the tmp file successfully, and only the final rename() fails
+        // (OS "Is a directory" error). This is a portable way to hit the
+        // rename-failure branch without racy chmod timing.
+        final targetDir = Directory(
+          p.join(vaultDir.path, 'project', 'pro-orc.md'),
+        );
+        await targetDir.create();
+
+        final result = await writer.write(
+          vaultRoot: vaultDir.path,
+          hubFolder: 'project',
+          hubSlug: 'pro-orc',
+          displayName: 'Pro Orc',
+          fields: _fieldsAt(DateTime.utc(2026, 8, 23, 9, 15)),
+        );
+
+        expect(
+          result,
+          anyOf(
+            equals(VaultWriteResult.skippedIoError),
+            equals(VaultWriteResult.skippedLocked),
+          ),
+        );
+
+        final entries = await Directory(
+          p.join(vaultDir.path, 'project'),
+        ).list().toList();
+        final tmpFiles = entries.where(
+          (e) => p.basename(e.path).contains('.tmp-'),
+        );
+        expect(
+          tmpFiles,
+          isEmpty,
+          reason:
+              'The tmp file written before the failed rename() must be '
+              'cleaned up, not left behind as invisible dotfile litter.',
+        );
+      },
+    );
+
+    test('a stale leftover tmp file from a past failed write is swept before '
+        'the next write to the same target (N-1)', () async {
+      final staleTmp = File(
+        p.join(vaultDir.path, 'project', '.pro-orc.md.tmp-111'),
+      );
+      await staleTmp.writeAsString('leftover from a crashed write');
+      // Backdate its mtime well past the staleness threshold.
+      await staleTmp.setLastModified(
+        DateTime.now().subtract(const Duration(minutes: 10)),
+      );
+
+      await writer.write(
+        vaultRoot: vaultDir.path,
+        hubFolder: 'project',
+        hubSlug: 'pro-orc',
+        displayName: 'Pro Orc',
+        fields: _fieldsAt(DateTime.utc(2026, 8, 23, 9, 15)),
+      );
+
+      expect(staleTmp.existsSync(), isFalse);
+    });
   });
 
   group('symlink escape (M-3)', () {

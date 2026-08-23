@@ -236,6 +236,14 @@ class VaultStatusNotifier extends Notifier<Set<String>> {
   /// ever happened) — and only for a project not in the Archiv group.
   /// Silently no-ops otherwise; never throws.
   ///
+  /// [isArchived]: N-5 fix (review re-round nit) — when the caller already
+  /// knows whether [project] is in the Archiv group (e.g. shell_screen.dart
+  /// iterating a batch of projects with `membershipProvider`'s map already
+  /// in hand), pass it here to skip this method's own DB round-trip
+  /// entirely. Left `null` (the default), it falls back to the internal
+  /// [_isArchived] query — callers that don't already have the answer (e.g.
+  /// direct unit-test calls) keep working unchanged.
+  ///
   /// M-1 fix (review round 1): the in-flight guard is claimed
   /// SYNCHRONOUSLY as the very first statement — before any `await`, not
   /// after the archived/debounce checks that used to precede it. Two
@@ -246,10 +254,11 @@ class VaultStatusNotifier extends Notifier<Set<String>> {
   /// releasing it in every early-return path (via `finally`) closes that
   /// window entirely; every exit — archived, unchanged tuple, debounce not
   /// elapsed, or an actual write — goes through the same `try/finally`.
-  Future<void> syncIfDue(ProjectModel project) async {
+  Future<void> syncIfDue(ProjectModel project, {bool? isArchived}) async {
     if (!_tryClaimInFlight(project.folderId)) return;
     try {
-      if (await _isArchived(project.folderId)) return;
+      final archived = isArchived ?? await _isArchived(project.folderId);
+      if (archived) return;
 
       final db = ref.read(appDatabaseProvider);
       final tuple = _computeTuple(project);

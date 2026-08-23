@@ -387,6 +387,13 @@ $_markerEnd''';
       offset = lineEnd;
 
       final trimmed = line.trim();
+      // N-3 (review re-round nit): an UNCLOSED fence (malformed Markdown)
+      // keeps `inFence` true through the rest of the document, so a real
+      // marker pair below it is never found — the fallback then appends a
+      // fresh block, orphaning the old one rather than deleting it. That is
+      // the deliberate, safe side of the tradeoff this scanner always takes
+      // (duplicate content over risking a wrong splice into a fence) — see
+      // this method's doc comment.
       final fenceMatch = RegExp(r'^(`{3,}|~{3,})').firstMatch(trimmed);
       if (fenceMatch != null) {
         final char = fenceMatch.group(1)![0];
@@ -532,6 +539,16 @@ $_markerEnd''';
     );
   }
 
+  /// Prefix shared by every temp file this writer creates for [file] — used
+  /// both to name a fresh temp file and to recognize stale ones left behind
+  /// by a prior failed write (N-1).
+  String _tmpPrefix(File file) => '.${p.basename(file.path)}.tmp-';
+
+  /// How old a leftover `.tmp-*` sibling must be before [_writeAtomic]
+  /// treats it as stale (from a past crashed/killed write, not one that is
+  /// concurrently in progress right now) and sweeps it.
+  static const _staleTmpAge = Duration(minutes: 5);
+
   /// Writes [content] atomically (B-3): a temp file in the SAME directory
   /// as [file] (guaranteeing the rename below is same-filesystem, hence
   /// atomic on macOS/APFS/HFS+) is written and flushed first, then
@@ -540,28 +557,81 @@ $_markerEnd''';
   /// no window where the hub can be observed truncated or partially
   /// written, unlike the previous direct `writeAsString` (which opens with
   /// `FileMode.write`, truncating the target immediately).
+  ///
+  /// N-1 (review re-round, nit): a rename failure previously left the
+  /// just-written `.tmp-*` dotfile behind — harmless (the original hub is
+  /// untouched and Obsidian hides dotfiles), but it can accumulate silently
+  /// across repeated failures. Two mitigations: (1) any failure in this
+  /// method now best-effort deletes the tmp file it just created before
+  /// rethrowing/returning, and (2) before writing, it sweeps any
+  /// `_staleTmpAge`-or-older `.tmp-*` siblings left over from a PAST failed
+  /// write for the same target (age-gated so a tmp file from a write that
+  /// is concurrently in progress right now is never touched).
   Future<void> _writeAtomic(
     File file,
     String content, {
     bool prependBom = false,
   }) async {
     final dir = file.parent;
+    await _sweepStaleTmpFiles(dir, file);
+
     final tmpPath = p.join(
       dir.path,
-      '.${p.basename(file.path)}.tmp-${DateTime.now().microsecondsSinceEpoch}',
+      '${_tmpPrefix(file)}${DateTime.now().microsecondsSinceEpoch}',
     );
     final tmpFile = File(tmpPath);
-    final raf = await tmpFile.open(mode: FileMode.write);
     try {
-      if (prependBom) {
-        await raf.writeFrom(const [0xEF, 0xBB, 0xBF]);
+      final raf = await tmpFile.open(mode: FileMode.write);
+      try {
+        if (prependBom) {
+          await raf.writeFrom(const [0xEF, 0xBB, 0xBF]);
+        }
+        await raf.writeString(content, encoding: utf8);
+        await raf.flush();
+      } finally {
+        await raf.close();
       }
-      await raf.writeString(content, encoding: utf8);
-      await raf.flush();
-    } finally {
-      await raf.close();
+      await tmpFile.rename(file.path);
+    } catch (_) {
+      // Best-effort cleanup: delete the tmp file this call created before
+      // propagating the original error to write()'s try/catch (which maps
+      // it to a VaultWriteResult). A failure here (e.g. the tmp file was
+      // never created, or is already gone) is deliberately swallowed —
+      // this is cleanup-of-cleanup, not the primary error path.
+      try {
+        if (await tmpFile.exists()) await tmpFile.delete();
+      } catch (_) {
+        // Nothing more we can do; the original error still propagates.
+      }
+      rethrow;
     }
-    await tmpFile.rename(file.path);
+  }
+
+  /// Deletes `.tmp-*` siblings of [file] in [dir] older than [_staleTmpAge]
+  /// — leftovers from a past crashed/killed write. Best-effort: any error
+  /// listing or deleting is swallowed (this is hygiene, not correctness —
+  /// a swept-or-not stale tmp file never affects the write this call is
+  /// about to perform).
+  Future<void> _sweepStaleTmpFiles(Directory dir, File file) async {
+    final prefix = _tmpPrefix(file);
+    try {
+      if (!await dir.exists()) return;
+      final now = DateTime.now();
+      await for (final entity in dir.list(followLinks: false)) {
+        if (entity is! File) continue;
+        if (!p.basename(entity.path).startsWith(prefix)) continue;
+        try {
+          final modified = (await entity.stat()).modified;
+          if (now.difference(modified) >= _staleTmpAge) {
+            await entity.delete();
+          }
+        } catch (_) {
+          // Skip this one file; sweeping is best-effort.
+        }
+      }
+    } catch (_) {
+      // Listing the directory failed — nothing to sweep, not fatal.
+    }
   }
 }
 

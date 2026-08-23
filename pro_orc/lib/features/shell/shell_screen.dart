@@ -165,14 +165,24 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
     // never blocks the others — Wave 3's per-project in-flight Set already
     // handles overlap safety if a tick fires again before a prior write for
     // the same project finishes.
+    //
+    // N-5 fix (review re-round nit): `membership` is already read once
+    // below and used both to skip the syncIfDue() call for Archiv projects
+    // AND to pass the known archived status into syncIfDue's `isArchived`
+    // parameter — previously syncIfDue() still ran its own `_isArchived` DB
+    // query internally for every non-Archiv project despite the caller
+    // already knowing the answer, i.e. ~90 redundant queries per watcher
+    // tick at real-world project counts (the exact fan-out shape the
+    // 2026-08-20 process-storm postmortem warns against).
     ref.listen(projectsProvider, (previous, next) {
       final projects = next.value;
       if (projects == null) return;
       final membership = ref.read(membershipProvider);
       final notifier = ref.read(vaultStatusProvider.notifier);
       for (final project in projects) {
-        if (membership[project.folderId] == kArchiveGroupId) continue;
-        unawaited(notifier.syncIfDue(project));
+        final isArchived = membership[project.folderId] == kArchiveGroupId;
+        if (isArchived) continue;
+        unawaited(notifier.syncIfDue(project, isArchived: isArchived));
       }
     });
 

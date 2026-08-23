@@ -208,6 +208,29 @@ void main() {
         expect(hubFile.existsSync(), isFalse);
       },
     );
+
+    test('passing isArchived: true short-circuits even a non-archived project '
+        '(N-5, review re-round nit) — the caller-supplied value is honored, '
+        'not just accepted and ignored', () async {
+      // Deliberately NOT archived in the DB — proves this test would fail
+      // if syncIfDue ignored the parameter and fell through to its own
+      // (correctly "not archived") DB query.
+      final project = _project('not-archived-in-db');
+
+      await notifier().syncIfDue(project, isArchived: true);
+
+      expect(fakeWriter.calls, isEmpty);
+    });
+
+    test('passing isArchived: false skips the internal DB query and proceeds '
+        '(N-5) — same net effect as the default (null) path for a project '
+        'that genuinely is not archived', () async {
+      final project = _project('proj-a');
+
+      await notifier().syncIfDue(project, isArchived: false);
+
+      expect(fakeWriter.calls.length, equals(1));
+    });
   });
 
   group('manual bypass (US-010-5)', () {

@@ -109,6 +109,18 @@ class $AppConfigTableTable extends AppConfigTable
         ),
         defaultValue: const Constant(false),
       );
+  static const VerificationMeta _vaultHubFolderMeta = const VerificationMeta(
+    'vaultHubFolder',
+  );
+  @override
+  late final GeneratedColumn<String> vaultHubFolder = GeneratedColumn<String>(
+    'vault_hub_folder',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('project'),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -119,6 +131,7 @@ class $AppConfigTableTable extends AppConfigTable
     vaultDir,
     viewMode,
     projectOrganizationSeedApplied,
+    vaultHubFolder,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -186,6 +199,15 @@ class $AppConfigTableTable extends AppConfigTable
         ),
       );
     }
+    if (data.containsKey('vault_hub_folder')) {
+      context.handle(
+        _vaultHubFolderMeta,
+        vaultHubFolder.isAcceptableOrUnknown(
+          data['vault_hub_folder']!,
+          _vaultHubFolderMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -227,6 +249,10 @@ class $AppConfigTableTable extends AppConfigTable
         DriftSqlType.bool,
         data['${effectivePrefix}project_organization_seed_applied'],
       )!,
+      vaultHubFolder: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}vault_hub_folder'],
+      )!,
     );
   }
 
@@ -261,6 +287,12 @@ class AppConfigTableData extends DataClass
   /// seed (Wave 5). Independent of `ensureSystemGroups` — the Archiv system
   /// group exists regardless of this flag.
   final bool projectOrganizationSeedApplied;
+
+  /// Folder convention within [vaultDir] for project hubs (7-type-IA style),
+  /// e.g. 'project' for `project/<slug>.md`. Empty/default resolves to
+  /// 'project' — kept as an explicit column (not hardcoded) so the folder
+  /// name is user-configurable if their vault uses a different convention.
+  final String vaultHubFolder;
   const AppConfigTableData({
     required this.id,
     required this.scanDir,
@@ -270,6 +302,7 @@ class AppConfigTableData extends DataClass
     required this.vaultDir,
     required this.viewMode,
     required this.projectOrganizationSeedApplied,
+    required this.vaultHubFolder,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -284,6 +317,7 @@ class AppConfigTableData extends DataClass
     map['project_organization_seed_applied'] = Variable<bool>(
       projectOrganizationSeedApplied,
     );
+    map['vault_hub_folder'] = Variable<String>(vaultHubFolder);
     return map;
   }
 
@@ -297,6 +331,7 @@ class AppConfigTableData extends DataClass
       vaultDir: Value(vaultDir),
       viewMode: Value(viewMode),
       projectOrganizationSeedApplied: Value(projectOrganizationSeedApplied),
+      vaultHubFolder: Value(vaultHubFolder),
     );
   }
 
@@ -316,6 +351,7 @@ class AppConfigTableData extends DataClass
       projectOrganizationSeedApplied: serializer.fromJson<bool>(
         json['projectOrganizationSeedApplied'],
       ),
+      vaultHubFolder: serializer.fromJson<String>(json['vaultHubFolder']),
     );
   }
   @override
@@ -332,6 +368,7 @@ class AppConfigTableData extends DataClass
       'projectOrganizationSeedApplied': serializer.toJson<bool>(
         projectOrganizationSeedApplied,
       ),
+      'vaultHubFolder': serializer.toJson<String>(vaultHubFolder),
     };
   }
 
@@ -344,6 +381,7 @@ class AppConfigTableData extends DataClass
     String? vaultDir,
     String? viewMode,
     bool? projectOrganizationSeedApplied,
+    String? vaultHubFolder,
   }) => AppConfigTableData(
     id: id ?? this.id,
     scanDir: scanDir ?? this.scanDir,
@@ -354,6 +392,7 @@ class AppConfigTableData extends DataClass
     viewMode: viewMode ?? this.viewMode,
     projectOrganizationSeedApplied:
         projectOrganizationSeedApplied ?? this.projectOrganizationSeedApplied,
+    vaultHubFolder: vaultHubFolder ?? this.vaultHubFolder,
   );
   AppConfigTableData copyWithCompanion(AppConfigTableCompanion data) {
     return AppConfigTableData(
@@ -372,6 +411,9 @@ class AppConfigTableData extends DataClass
           data.projectOrganizationSeedApplied.present
           ? data.projectOrganizationSeedApplied.value
           : this.projectOrganizationSeedApplied,
+      vaultHubFolder: data.vaultHubFolder.present
+          ? data.vaultHubFolder.value
+          : this.vaultHubFolder,
     );
   }
 
@@ -386,8 +428,9 @@ class AppConfigTableData extends DataClass
           ..write('vaultDir: $vaultDir, ')
           ..write('viewMode: $viewMode, ')
           ..write(
-            'projectOrganizationSeedApplied: $projectOrganizationSeedApplied',
+            'projectOrganizationSeedApplied: $projectOrganizationSeedApplied, ',
           )
+          ..write('vaultHubFolder: $vaultHubFolder')
           ..write(')'))
         .toString();
   }
@@ -402,6 +445,7 @@ class AppConfigTableData extends DataClass
     vaultDir,
     viewMode,
     projectOrganizationSeedApplied,
+    vaultHubFolder,
   );
   @override
   bool operator ==(Object other) =>
@@ -415,7 +459,8 @@ class AppConfigTableData extends DataClass
           other.vaultDir == this.vaultDir &&
           other.viewMode == this.viewMode &&
           other.projectOrganizationSeedApplied ==
-              this.projectOrganizationSeedApplied);
+              this.projectOrganizationSeedApplied &&
+          other.vaultHubFolder == this.vaultHubFolder);
 }
 
 class AppConfigTableCompanion extends UpdateCompanion<AppConfigTableData> {
@@ -427,6 +472,7 @@ class AppConfigTableCompanion extends UpdateCompanion<AppConfigTableData> {
   final Value<String> vaultDir;
   final Value<String> viewMode;
   final Value<bool> projectOrganizationSeedApplied;
+  final Value<String> vaultHubFolder;
   const AppConfigTableCompanion({
     this.id = const Value.absent(),
     this.scanDir = const Value.absent(),
@@ -436,6 +482,7 @@ class AppConfigTableCompanion extends UpdateCompanion<AppConfigTableData> {
     this.vaultDir = const Value.absent(),
     this.viewMode = const Value.absent(),
     this.projectOrganizationSeedApplied = const Value.absent(),
+    this.vaultHubFolder = const Value.absent(),
   });
   AppConfigTableCompanion.insert({
     this.id = const Value.absent(),
@@ -446,6 +493,7 @@ class AppConfigTableCompanion extends UpdateCompanion<AppConfigTableData> {
     this.vaultDir = const Value.absent(),
     this.viewMode = const Value.absent(),
     this.projectOrganizationSeedApplied = const Value.absent(),
+    this.vaultHubFolder = const Value.absent(),
   });
   static Insertable<AppConfigTableData> custom({
     Expression<int>? id,
@@ -456,6 +504,7 @@ class AppConfigTableCompanion extends UpdateCompanion<AppConfigTableData> {
     Expression<String>? vaultDir,
     Expression<String>? viewMode,
     Expression<bool>? projectOrganizationSeedApplied,
+    Expression<String>? vaultHubFolder,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -467,6 +516,7 @@ class AppConfigTableCompanion extends UpdateCompanion<AppConfigTableData> {
       if (viewMode != null) 'view_mode': viewMode,
       if (projectOrganizationSeedApplied != null)
         'project_organization_seed_applied': projectOrganizationSeedApplied,
+      if (vaultHubFolder != null) 'vault_hub_folder': vaultHubFolder,
     });
   }
 
@@ -479,6 +529,7 @@ class AppConfigTableCompanion extends UpdateCompanion<AppConfigTableData> {
     Value<String>? vaultDir,
     Value<String>? viewMode,
     Value<bool>? projectOrganizationSeedApplied,
+    Value<String>? vaultHubFolder,
   }) {
     return AppConfigTableCompanion(
       id: id ?? this.id,
@@ -490,6 +541,7 @@ class AppConfigTableCompanion extends UpdateCompanion<AppConfigTableData> {
       viewMode: viewMode ?? this.viewMode,
       projectOrganizationSeedApplied:
           projectOrganizationSeedApplied ?? this.projectOrganizationSeedApplied,
+      vaultHubFolder: vaultHubFolder ?? this.vaultHubFolder,
     );
   }
 
@@ -522,6 +574,9 @@ class AppConfigTableCompanion extends UpdateCompanion<AppConfigTableData> {
         projectOrganizationSeedApplied.value,
       );
     }
+    if (vaultHubFolder.present) {
+      map['vault_hub_folder'] = Variable<String>(vaultHubFolder.value);
+    }
     return map;
   }
 
@@ -536,8 +591,9 @@ class AppConfigTableCompanion extends UpdateCompanion<AppConfigTableData> {
           ..write('vaultDir: $vaultDir, ')
           ..write('viewMode: $viewMode, ')
           ..write(
-            'projectOrganizationSeedApplied: $projectOrganizationSeedApplied',
+            'projectOrganizationSeedApplied: $projectOrganizationSeedApplied, ',
           )
+          ..write('vaultHubFolder: $vaultHubFolder')
           ..write(')'))
         .toString();
   }
@@ -619,6 +675,29 @@ class $ProjectSettingsTableTable extends ProjectSettingsTable
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _vaultHubSlugMeta = const VerificationMeta(
+    'vaultHubSlug',
+  );
+  @override
+  late final GeneratedColumn<String> vaultHubSlug = GeneratedColumn<String>(
+    'vault_hub_slug',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _vaultLastSyncAtMeta = const VerificationMeta(
+    'vaultLastSyncAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> vaultLastSyncAt =
+      GeneratedColumn<DateTime>(
+        'vault_last_sync_at',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      );
   @override
   List<GeneratedColumn> get $columns => [
     folderId,
@@ -627,6 +706,8 @@ class $ProjectSettingsTableTable extends ProjectSettingsTable
     typeSetAt,
     isHidden,
     groupId,
+    vaultHubSlug,
+    vaultLastSyncAt,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -684,6 +765,24 @@ class $ProjectSettingsTableTable extends ProjectSettingsTable
         groupId.isAcceptableOrUnknown(data['group_id']!, _groupIdMeta),
       );
     }
+    if (data.containsKey('vault_hub_slug')) {
+      context.handle(
+        _vaultHubSlugMeta,
+        vaultHubSlug.isAcceptableOrUnknown(
+          data['vault_hub_slug']!,
+          _vaultHubSlugMeta,
+        ),
+      );
+    }
+    if (data.containsKey('vault_last_sync_at')) {
+      context.handle(
+        _vaultLastSyncAtMeta,
+        vaultLastSyncAt.isAcceptableOrUnknown(
+          data['vault_last_sync_at']!,
+          _vaultLastSyncAtMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -720,6 +819,14 @@ class $ProjectSettingsTableTable extends ProjectSettingsTable
         DriftSqlType.string,
         data['${effectivePrefix}group_id'],
       ),
+      vaultHubSlug: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}vault_hub_slug'],
+      ),
+      vaultLastSyncAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}vault_last_sync_at'],
+      ),
     );
   }
 
@@ -737,6 +844,18 @@ class ProjectSettingsTableData extends DataClass
   final DateTime? typeSetAt;
   final bool isHidden;
   final String? groupId;
+
+  /// Confirmed vault hub filename stem this project is linked to (e.g.
+  /// 'pro-orc' for project/pro-orc.md), relative to vaultDir/vaultHubFolder.
+  /// Null = not yet linked (fuzzy-match-or-auto-create path still applies).
+  final String? vaultHubSlug;
+
+  /// Timestamp of the last AUTOMATIC vault write for this project (the
+  /// automatic-write debounce interval enforced in Wave 3 reads this).
+  /// Manual "Jetzt synchronisieren" writes (added in Wave 4) also update
+  /// this column so a manual write resets the debounce window, preventing
+  /// an automatic write from firing immediately after.
+  final DateTime? vaultLastSyncAt;
   const ProjectSettingsTableData({
     required this.folderId,
     this.projectType,
@@ -744,6 +863,8 @@ class ProjectSettingsTableData extends DataClass
     this.typeSetAt,
     required this.isHidden,
     this.groupId,
+    this.vaultHubSlug,
+    this.vaultLastSyncAt,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -761,6 +882,12 @@ class ProjectSettingsTableData extends DataClass
     map['is_hidden'] = Variable<bool>(isHidden);
     if (!nullToAbsent || groupId != null) {
       map['group_id'] = Variable<String>(groupId);
+    }
+    if (!nullToAbsent || vaultHubSlug != null) {
+      map['vault_hub_slug'] = Variable<String>(vaultHubSlug);
+    }
+    if (!nullToAbsent || vaultLastSyncAt != null) {
+      map['vault_last_sync_at'] = Variable<DateTime>(vaultLastSyncAt);
     }
     return map;
   }
@@ -781,6 +908,12 @@ class ProjectSettingsTableData extends DataClass
       groupId: groupId == null && nullToAbsent
           ? const Value.absent()
           : Value(groupId),
+      vaultHubSlug: vaultHubSlug == null && nullToAbsent
+          ? const Value.absent()
+          : Value(vaultHubSlug),
+      vaultLastSyncAt: vaultLastSyncAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(vaultLastSyncAt),
     );
   }
 
@@ -796,6 +929,8 @@ class ProjectSettingsTableData extends DataClass
       typeSetAt: serializer.fromJson<DateTime?>(json['typeSetAt']),
       isHidden: serializer.fromJson<bool>(json['isHidden']),
       groupId: serializer.fromJson<String?>(json['groupId']),
+      vaultHubSlug: serializer.fromJson<String?>(json['vaultHubSlug']),
+      vaultLastSyncAt: serializer.fromJson<DateTime?>(json['vaultLastSyncAt']),
     );
   }
   @override
@@ -808,6 +943,8 @@ class ProjectSettingsTableData extends DataClass
       'typeSetAt': serializer.toJson<DateTime?>(typeSetAt),
       'isHidden': serializer.toJson<bool>(isHidden),
       'groupId': serializer.toJson<String?>(groupId),
+      'vaultHubSlug': serializer.toJson<String?>(vaultHubSlug),
+      'vaultLastSyncAt': serializer.toJson<DateTime?>(vaultLastSyncAt),
     };
   }
 
@@ -818,6 +955,8 @@ class ProjectSettingsTableData extends DataClass
     Value<DateTime?> typeSetAt = const Value.absent(),
     bool? isHidden,
     Value<String?> groupId = const Value.absent(),
+    Value<String?> vaultHubSlug = const Value.absent(),
+    Value<DateTime?> vaultLastSyncAt = const Value.absent(),
   }) => ProjectSettingsTableData(
     folderId: folderId ?? this.folderId,
     projectType: projectType.present ? projectType.value : this.projectType,
@@ -825,6 +964,10 @@ class ProjectSettingsTableData extends DataClass
     typeSetAt: typeSetAt.present ? typeSetAt.value : this.typeSetAt,
     isHidden: isHidden ?? this.isHidden,
     groupId: groupId.present ? groupId.value : this.groupId,
+    vaultHubSlug: vaultHubSlug.present ? vaultHubSlug.value : this.vaultHubSlug,
+    vaultLastSyncAt: vaultLastSyncAt.present
+        ? vaultLastSyncAt.value
+        : this.vaultLastSyncAt,
   );
   ProjectSettingsTableData copyWithCompanion(
     ProjectSettingsTableCompanion data,
@@ -840,6 +983,12 @@ class ProjectSettingsTableData extends DataClass
       typeSetAt: data.typeSetAt.present ? data.typeSetAt.value : this.typeSetAt,
       isHidden: data.isHidden.present ? data.isHidden.value : this.isHidden,
       groupId: data.groupId.present ? data.groupId.value : this.groupId,
+      vaultHubSlug: data.vaultHubSlug.present
+          ? data.vaultHubSlug.value
+          : this.vaultHubSlug,
+      vaultLastSyncAt: data.vaultLastSyncAt.present
+          ? data.vaultLastSyncAt.value
+          : this.vaultLastSyncAt,
     );
   }
 
@@ -851,7 +1000,9 @@ class ProjectSettingsTableData extends DataClass
           ..write('displayName: $displayName, ')
           ..write('typeSetAt: $typeSetAt, ')
           ..write('isHidden: $isHidden, ')
-          ..write('groupId: $groupId')
+          ..write('groupId: $groupId, ')
+          ..write('vaultHubSlug: $vaultHubSlug, ')
+          ..write('vaultLastSyncAt: $vaultLastSyncAt')
           ..write(')'))
         .toString();
   }
@@ -864,6 +1015,8 @@ class ProjectSettingsTableData extends DataClass
     typeSetAt,
     isHidden,
     groupId,
+    vaultHubSlug,
+    vaultLastSyncAt,
   );
   @override
   bool operator ==(Object other) =>
@@ -874,7 +1027,9 @@ class ProjectSettingsTableData extends DataClass
           other.displayName == this.displayName &&
           other.typeSetAt == this.typeSetAt &&
           other.isHidden == this.isHidden &&
-          other.groupId == this.groupId);
+          other.groupId == this.groupId &&
+          other.vaultHubSlug == this.vaultHubSlug &&
+          other.vaultLastSyncAt == this.vaultLastSyncAt);
 }
 
 class ProjectSettingsTableCompanion
@@ -885,6 +1040,8 @@ class ProjectSettingsTableCompanion
   final Value<DateTime?> typeSetAt;
   final Value<bool> isHidden;
   final Value<String?> groupId;
+  final Value<String?> vaultHubSlug;
+  final Value<DateTime?> vaultLastSyncAt;
   final Value<int> rowid;
   const ProjectSettingsTableCompanion({
     this.folderId = const Value.absent(),
@@ -893,6 +1050,8 @@ class ProjectSettingsTableCompanion
     this.typeSetAt = const Value.absent(),
     this.isHidden = const Value.absent(),
     this.groupId = const Value.absent(),
+    this.vaultHubSlug = const Value.absent(),
+    this.vaultLastSyncAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   ProjectSettingsTableCompanion.insert({
@@ -902,6 +1061,8 @@ class ProjectSettingsTableCompanion
     this.typeSetAt = const Value.absent(),
     this.isHidden = const Value.absent(),
     this.groupId = const Value.absent(),
+    this.vaultHubSlug = const Value.absent(),
+    this.vaultLastSyncAt = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : folderId = Value(folderId);
   static Insertable<ProjectSettingsTableData> custom({
@@ -911,6 +1072,8 @@ class ProjectSettingsTableCompanion
     Expression<DateTime>? typeSetAt,
     Expression<bool>? isHidden,
     Expression<String>? groupId,
+    Expression<String>? vaultHubSlug,
+    Expression<DateTime>? vaultLastSyncAt,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -920,6 +1083,8 @@ class ProjectSettingsTableCompanion
       if (typeSetAt != null) 'type_set_at': typeSetAt,
       if (isHidden != null) 'is_hidden': isHidden,
       if (groupId != null) 'group_id': groupId,
+      if (vaultHubSlug != null) 'vault_hub_slug': vaultHubSlug,
+      if (vaultLastSyncAt != null) 'vault_last_sync_at': vaultLastSyncAt,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -931,6 +1096,8 @@ class ProjectSettingsTableCompanion
     Value<DateTime?>? typeSetAt,
     Value<bool>? isHidden,
     Value<String?>? groupId,
+    Value<String?>? vaultHubSlug,
+    Value<DateTime?>? vaultLastSyncAt,
     Value<int>? rowid,
   }) {
     return ProjectSettingsTableCompanion(
@@ -940,6 +1107,8 @@ class ProjectSettingsTableCompanion
       typeSetAt: typeSetAt ?? this.typeSetAt,
       isHidden: isHidden ?? this.isHidden,
       groupId: groupId ?? this.groupId,
+      vaultHubSlug: vaultHubSlug ?? this.vaultHubSlug,
+      vaultLastSyncAt: vaultLastSyncAt ?? this.vaultLastSyncAt,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -965,6 +1134,12 @@ class ProjectSettingsTableCompanion
     if (groupId.present) {
       map['group_id'] = Variable<String>(groupId.value);
     }
+    if (vaultHubSlug.present) {
+      map['vault_hub_slug'] = Variable<String>(vaultHubSlug.value);
+    }
+    if (vaultLastSyncAt.present) {
+      map['vault_last_sync_at'] = Variable<DateTime>(vaultLastSyncAt.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -980,6 +1155,8 @@ class ProjectSettingsTableCompanion
           ..write('typeSetAt: $typeSetAt, ')
           ..write('isHidden: $isHidden, ')
           ..write('groupId: $groupId, ')
+          ..write('vaultHubSlug: $vaultHubSlug, ')
+          ..write('vaultLastSyncAt: $vaultLastSyncAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -1509,6 +1686,7 @@ typedef $$AppConfigTableTableCreateCompanionBuilder =
       Value<String> vaultDir,
       Value<String> viewMode,
       Value<bool> projectOrganizationSeedApplied,
+      Value<String> vaultHubFolder,
     });
 typedef $$AppConfigTableTableUpdateCompanionBuilder =
     AppConfigTableCompanion Function({
@@ -1520,6 +1698,7 @@ typedef $$AppConfigTableTableUpdateCompanionBuilder =
       Value<String> vaultDir,
       Value<String> viewMode,
       Value<bool> projectOrganizationSeedApplied,
+      Value<String> vaultHubFolder,
     });
 
 class $$AppConfigTableTableFilterComposer
@@ -1568,6 +1747,11 @@ class $$AppConfigTableTableFilterComposer
 
   ColumnFilters<bool> get projectOrganizationSeedApplied => $composableBuilder(
     column: $table.projectOrganizationSeedApplied,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get vaultHubFolder => $composableBuilder(
+    column: $table.vaultHubFolder,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -1621,6 +1805,11 @@ class $$AppConfigTableTableOrderingComposer
         column: $table.projectOrganizationSeedApplied,
         builder: (column) => ColumnOrderings(column),
       );
+
+  ColumnOrderings<String> get vaultHubFolder => $composableBuilder(
+    column: $table.vaultHubFolder,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$AppConfigTableTableAnnotationComposer
@@ -1662,6 +1851,11 @@ class $$AppConfigTableTableAnnotationComposer
         column: $table.projectOrganizationSeedApplied,
         builder: (column) => column,
       );
+
+  GeneratedColumn<String> get vaultHubFolder => $composableBuilder(
+    column: $table.vaultHubFolder,
+    builder: (column) => column,
+  );
 }
 
 class $$AppConfigTableTableTableManager
@@ -1710,6 +1904,7 @@ class $$AppConfigTableTableTableManager
                 Value<String> viewMode = const Value.absent(),
                 Value<bool> projectOrganizationSeedApplied =
                     const Value.absent(),
+                Value<String> vaultHubFolder = const Value.absent(),
               }) => AppConfigTableCompanion(
                 id: id,
                 scanDir: scanDir,
@@ -1719,6 +1914,7 @@ class $$AppConfigTableTableTableManager
                 vaultDir: vaultDir,
                 viewMode: viewMode,
                 projectOrganizationSeedApplied: projectOrganizationSeedApplied,
+                vaultHubFolder: vaultHubFolder,
               ),
           createCompanionCallback:
               ({
@@ -1731,6 +1927,7 @@ class $$AppConfigTableTableTableManager
                 Value<String> viewMode = const Value.absent(),
                 Value<bool> projectOrganizationSeedApplied =
                     const Value.absent(),
+                Value<String> vaultHubFolder = const Value.absent(),
               }) => AppConfigTableCompanion.insert(
                 id: id,
                 scanDir: scanDir,
@@ -1740,6 +1937,7 @@ class $$AppConfigTableTableTableManager
                 vaultDir: vaultDir,
                 viewMode: viewMode,
                 projectOrganizationSeedApplied: projectOrganizationSeedApplied,
+                vaultHubFolder: vaultHubFolder,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
@@ -1774,6 +1972,8 @@ typedef $$ProjectSettingsTableTableCreateCompanionBuilder =
       Value<DateTime?> typeSetAt,
       Value<bool> isHidden,
       Value<String?> groupId,
+      Value<String?> vaultHubSlug,
+      Value<DateTime?> vaultLastSyncAt,
       Value<int> rowid,
     });
 typedef $$ProjectSettingsTableTableUpdateCompanionBuilder =
@@ -1784,6 +1984,8 @@ typedef $$ProjectSettingsTableTableUpdateCompanionBuilder =
       Value<DateTime?> typeSetAt,
       Value<bool> isHidden,
       Value<String?> groupId,
+      Value<String?> vaultHubSlug,
+      Value<DateTime?> vaultLastSyncAt,
       Value<int> rowid,
     });
 
@@ -1823,6 +2025,16 @@ class $$ProjectSettingsTableTableFilterComposer
 
   ColumnFilters<String> get groupId => $composableBuilder(
     column: $table.groupId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get vaultHubSlug => $composableBuilder(
+    column: $table.vaultHubSlug,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get vaultLastSyncAt => $composableBuilder(
+    column: $table.vaultLastSyncAt,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -1865,6 +2077,16 @@ class $$ProjectSettingsTableTableOrderingComposer
     column: $table.groupId,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get vaultHubSlug => $composableBuilder(
+    column: $table.vaultHubSlug,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get vaultLastSyncAt => $composableBuilder(
+    column: $table.vaultLastSyncAt,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$ProjectSettingsTableTableAnnotationComposer
@@ -1897,6 +2119,16 @@ class $$ProjectSettingsTableTableAnnotationComposer
 
   GeneratedColumn<String> get groupId =>
       $composableBuilder(column: $table.groupId, builder: (column) => column);
+
+  GeneratedColumn<String> get vaultHubSlug => $composableBuilder(
+    column: $table.vaultHubSlug,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get vaultLastSyncAt => $composableBuilder(
+    column: $table.vaultLastSyncAt,
+    builder: (column) => column,
+  );
 }
 
 class $$ProjectSettingsTableTableTableManager
@@ -1948,6 +2180,8 @@ class $$ProjectSettingsTableTableTableManager
                 Value<DateTime?> typeSetAt = const Value.absent(),
                 Value<bool> isHidden = const Value.absent(),
                 Value<String?> groupId = const Value.absent(),
+                Value<String?> vaultHubSlug = const Value.absent(),
+                Value<DateTime?> vaultLastSyncAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ProjectSettingsTableCompanion(
                 folderId: folderId,
@@ -1956,6 +2190,8 @@ class $$ProjectSettingsTableTableTableManager
                 typeSetAt: typeSetAt,
                 isHidden: isHidden,
                 groupId: groupId,
+                vaultHubSlug: vaultHubSlug,
+                vaultLastSyncAt: vaultLastSyncAt,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -1966,6 +2202,8 @@ class $$ProjectSettingsTableTableTableManager
                 Value<DateTime?> typeSetAt = const Value.absent(),
                 Value<bool> isHidden = const Value.absent(),
                 Value<String?> groupId = const Value.absent(),
+                Value<String?> vaultHubSlug = const Value.absent(),
+                Value<DateTime?> vaultLastSyncAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ProjectSettingsTableCompanion.insert(
                 folderId: folderId,
@@ -1974,6 +2212,8 @@ class $$ProjectSettingsTableTableTableManager
                 typeSetAt: typeSetAt,
                 isHidden: isHidden,
                 groupId: groupId,
+                vaultHubSlug: vaultHubSlug,
+                vaultLastSyncAt: vaultLastSyncAt,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

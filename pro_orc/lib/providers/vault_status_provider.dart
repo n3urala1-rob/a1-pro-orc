@@ -8,6 +8,7 @@ import 'package:pro_orc/data/db/tables/project_groups_table.dart'
     show kArchiveGroupId;
 import 'package:pro_orc/data/models/a1_data.dart';
 import 'package:pro_orc/data/models/project_model.dart';
+import 'package:pro_orc/data/models/vault_link_status.dart';
 import 'package:pro_orc/data/services/vault_hub_matcher.dart';
 import 'package:pro_orc/data/services/vault_status_writer.dart';
 import 'package:pro_orc/providers/database_provider.dart';
@@ -71,6 +72,23 @@ Future<String> _resolveVaultRoot(dynamic db) async {
   final home = Platform.environment['HOME'] ?? '/tmp';
   return p.join(home, 'N3URAL-Vault');
 }
+
+/// Public read of the same resolution, for UI providers (Wave 4's vault-
+/// unreachable settings indicator) that need it without going through the
+/// notifier's private helper.
+final resolvedVaultRootProvider = FutureProvider<String>((ref) async {
+  final db = ref.watch(appDatabaseProvider);
+  return _resolveVaultRoot(db);
+});
+
+/// True when the resolved vault root exists on disk — backs the settings
+/// screen's "Vault-Pfad nicht erreichbar" indicator (FR-016's UI half).
+/// Mirrors the same existence check [VaultStatusNotifier._writeAndRecord]
+/// performs before attempting a write.
+final vaultReachableProvider = FutureProvider<bool>((ref) async {
+  final root = await ref.watch(resolvedVaultRootProvider.future);
+  return Directory(root).exists();
+});
 
 /// Derives the `proorc_status` vocabulary word from a project's [A1Data],
 /// reusing the same word set `deriveDisplayStatus`/`DisplayStatus` already
@@ -146,9 +164,7 @@ String _deriveMilestone(A1Data? a1) {
 /// `ref.watch`s another provider from inside a method that runs on every
 /// tick, to avoid the exact re-subscribe/flicker class of bug the
 /// 2026-07-13 groups-flicker postmortem describes.
-class VaultStatusNotifier extends Notifier<void> {
-  final Set<String> _inFlightFolderIds = {};
-
+class VaultStatusNotifier extends Notifier<Set<String>> {
   /// In-memory record of the last tuple actually written per project this
   /// session — the "avoid a new DB column beyond Wave 1's two" approach the
   /// wave plan recommends. Cleared on app restart, which is fine: a restart
@@ -157,11 +173,23 @@ class VaultStatusNotifier extends Notifier<void> {
   final Map<String, _StatusTuple> _lastWrittenTuple = {};
 
   @override
-  void build() {}
+  Set<String> build() => const {};
 
   /// True while a write (automatic or manual) is in flight for [folderId].
-  /// Exposed for the UI's disabled-while-syncing button state (Wave 4).
-  bool isSyncing(String folderId) => _inFlightFolderIds.contains(folderId);
+  /// Exposed for the UI's disabled-while-syncing button state (Wave 4) —
+  /// [state] itself IS the in-flight set (not a side field), so
+  /// `ref.watch(vaultStatusProvider)` rebuilds a widget exactly when a
+  /// project's in-flight status changes, per the Notifier-state-drives-
+  /// rebuilds convention the rest of this codebase's providers use.
+  bool isSyncing(String folderId) => state.contains(folderId);
+
+  void _markInFlight(String folderId) {
+    state = {...state, folderId};
+  }
+
+  void _clearInFlight(String folderId) {
+    state = {...state}..remove(folderId);
+  }
 
   /// Automatic path: writes only when due — the tuple changed AND the
   /// 15-minute debounce interval has elapsed (or no automatic write has
@@ -169,7 +197,7 @@ class VaultStatusNotifier extends Notifier<void> {
   /// Silently no-ops otherwise; never throws.
   Future<void> syncIfDue(ProjectModel project) async {
     if (await _isArchived(project.folderId)) return;
-    if (_inFlightFolderIds.contains(project.folderId)) return;
+    if (isSyncing(project.folderId)) return;
 
     final db = ref.read(appDatabaseProvider);
     final tuple = _computeTuple(project);
@@ -196,7 +224,7 @@ class VaultStatusNotifier extends Notifier<void> {
     if (await _isArchived(project.folderId)) {
       return VaultWriteResult.skippedLocked;
     }
-    if (_inFlightFolderIds.contains(project.folderId)) {
+    if (isSyncing(project.folderId)) {
       return VaultWriteResult.skippedLocked;
     }
 
@@ -209,7 +237,7 @@ class VaultStatusNotifier extends Notifier<void> {
     _StatusTuple tuple, {
     required bool isManual,
   }) async {
-    _inFlightFolderIds.add(project.folderId);
+    _markInFlight(project.folderId);
     try {
       final db = ref.read(appDatabaseProvider);
       final vaultRoot = await _resolveVaultRoot(db);
@@ -258,7 +286,7 @@ class VaultStatusNotifier extends Notifier<void> {
 
       return result;
     } finally {
-      _inFlightFolderIds.remove(project.folderId);
+      _clearInFlight(project.folderId);
     }
   }
 
@@ -308,8 +336,49 @@ class VaultStatusNotifier extends Notifier<void> {
     final groupId = await db.getProjectGroupId(folderId);
     return groupId == kArchiveGroupId;
   }
+
+  /// Computes [project]'s current vault-link status for the Wave 4 UI
+  /// (settings card + batch confirmation dialog) — reuses the exact same
+  /// confirmed-link / fuzzy-match / auto-create resolution [syncNow] and
+  /// [syncIfDue] use internally, so the UI never disagrees with what an
+  /// actual write would do. Caller is responsible for excluding Archiv-group
+  /// projects beforehand (this method does not check — it is also used to
+  /// preview the state a manual unarchive would restore).
+  Future<VaultLinkStatus> linkStatusFor(ProjectModel project) async {
+    final db = ref.read(appDatabaseProvider);
+    final vaultRoot = await _resolveVaultRoot(db);
+    final hubFolder = await db.getVaultHubFolder();
+
+    final confirmed = await db.getVaultHubSlug(project.folderId);
+    if (confirmed != null && confirmed.isNotEmpty) {
+      return VaultLinkStatus(
+        folderId: project.folderId,
+        displayName: project.displayName,
+        kind: VaultLinkKind.linked,
+        hubSlug: confirmed,
+      );
+    }
+
+    final candidateStems = await _existingHubStems(vaultRoot, hubFolder);
+    final suggestion = suggestHub(project.folderId, candidateStems);
+    if (suggestion != null) {
+      return VaultLinkStatus(
+        folderId: project.folderId,
+        displayName: project.displayName,
+        kind: VaultLinkKind.pendingSuggestion,
+        hubSlug: suggestion,
+        confidence: hubSimilarity(project.folderId, suggestion),
+      );
+    }
+
+    return VaultLinkStatus(
+      folderId: project.folderId,
+      displayName: project.displayName,
+      kind: VaultLinkKind.willAutoCreate,
+    );
+  }
 }
 
-final vaultStatusProvider = NotifierProvider<VaultStatusNotifier, void>(
+final vaultStatusProvider = NotifierProvider<VaultStatusNotifier, Set<String>>(
   VaultStatusNotifier.new,
 );

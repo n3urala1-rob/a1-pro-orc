@@ -388,4 +388,50 @@ void main() {
       },
     );
   });
+
+  group('state reactivity (Wave 4 UI dependency)', () {
+    test(
+      'container.read(vaultStatusProvider) reflects the in-flight set while '
+      'a write is running, so ref.watch-ing widgets rebuild for isSyncing',
+      () async {
+        final project = _project('proj-a');
+        fakeWriter.blockUntil = Completer<void>();
+
+        expect(container.read(vaultStatusProvider), isEmpty);
+
+        final future = notifier().syncNow(project);
+        await Future.delayed(Duration.zero);
+
+        expect(container.read(vaultStatusProvider), contains('proj-a'));
+        expect(notifier().isSyncing('proj-a'), isTrue);
+
+        fakeWriter.blockUntil!.complete();
+        await future;
+
+        expect(container.read(vaultStatusProvider), isEmpty);
+        expect(notifier().isSyncing('proj-a'), isFalse);
+      },
+    );
+
+    test(
+      'listening to vaultStatusProvider fires on in-flight enter and exit',
+      () async {
+        final project = _project('proj-a');
+        fakeWriter.blockUntil = Completer<void>();
+        final emissions = <Set<String>>[];
+        container.listen(vaultStatusProvider, (previous, next) {
+          emissions.add(next);
+        });
+
+        final future = notifier().syncNow(project);
+        await Future.delayed(Duration.zero);
+        fakeWriter.blockUntil!.complete();
+        await future;
+
+        expect(emissions.length, equals(2));
+        expect(emissions.first, contains('proj-a'));
+        expect(emissions.last, isEmpty);
+      },
+    );
+  });
 }

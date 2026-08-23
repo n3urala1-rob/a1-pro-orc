@@ -10,11 +10,13 @@ import 'package:path/path.dart' as p;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:pro_orc/features/onboarding/onboarding_wizard.dart';
+import 'package:pro_orc/features/settings/vault_link_card.dart';
 import 'package:pro_orc/features/shell/glass_card.dart';
 import 'package:pro_orc/providers/database_provider.dart';
 import 'package:pro_orc/providers/learning_provider.dart';
 import 'package:pro_orc/providers/projects_provider.dart';
 import 'package:pro_orc/providers/theme_mode_provider.dart';
+import 'package:pro_orc/providers/vault_status_provider.dart';
 import 'package:pro_orc/providers/watcher_provider.dart';
 import 'package:pro_orc/theme/n3_colors.dart';
 
@@ -388,6 +390,55 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
               controller: _vaultController,
               hintText: '~/N3URAL-Vault',
               onSave: _saveVaultDir,
+            ),
+          ),
+
+          const SizedBox(height: 20),
+
+          // --- Vault-Sync ---
+          _buildSection(
+            colors: colors,
+            icon: LucideIcons.refreshCw,
+            title: 'Vault-Sync',
+            subtitle: 'Projektstatus automatisch in Obsidian-Hubs schreiben',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Consumer(
+                  builder: (context, ref, _) {
+                    final reachableAsync = ref.watch(vaultReachableProvider);
+                    if (reachableAsync.value == false) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(
+                              Icons.warning_amber_rounded,
+                              color: colors.amber,
+                              size: 14,
+                            ),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                'Vault-Pfad nicht erreichbar — Sync pausiert '
+                                'bis der Pfad wieder existiert. Zuordnungen '
+                                'bleiben erhalten.',
+                                style: TextStyle(
+                                  color: colors.amber,
+                                  fontSize: 11.5,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+                    return const SizedBox.shrink();
+                  },
+                ),
+                const VaultLinkCard(),
+              ],
             ),
           ),
 

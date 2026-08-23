@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -8,10 +9,14 @@ import 'package:window_manager/window_manager.dart';
 
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import 'package:pro_orc/data/db/tables/project_groups_table.dart'
+    show kArchiveGroupId;
 import 'package:pro_orc/features/onboarding/onboarding_wizard.dart';
 import 'package:pro_orc/providers/database_provider.dart';
 import 'package:pro_orc/providers/project_detail_provider.dart';
+import 'package:pro_orc/providers/project_group_membership_provider.dart';
 import 'package:pro_orc/providers/projects_provider.dart';
+import 'package:pro_orc/providers/vault_status_provider.dart';
 import 'package:pro_orc/providers/watcher_provider.dart';
 import 'package:pro_orc/theme/n3_colors.dart';
 import 'package:pro_orc/tray/tray_service.dart';
@@ -148,6 +153,38 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
     // Keep projectsProvider alive for the reactive watcher chain.
     // Unused local variable intentional — provider must be watched.
     ref.watch(projectsProvider);
+
+    // 010-vault-status-writer Wave 5: fire the automatic vault-sync trigger
+    // on every new resolved project list. `ref.listen` (not `ref.watch`) so
+    // this fires exactly once per new list rather than re-running the whole
+    // ShellScreen build for every emission-that-hasn't-actually-changed —
+    // consistent with projectsProvider's own value-equality-aware
+    // ProjectModel comparisons upstream (2026-08-20 process-storm fix). Each
+    // project's syncIfDue() call is independently fire-and-forget
+    // (unawaited) rather than sequentially awaited, so one slow/stuck write
+    // never blocks the others — Wave 3's per-project in-flight Set already
+    // handles overlap safety if a tick fires again before a prior write for
+    // the same project finishes.
+    //
+    // N-5 fix (review re-round nit): `membership` is already read once
+    // below and used both to skip the syncIfDue() call for Archiv projects
+    // AND to pass the known archived status into syncIfDue's `isArchived`
+    // parameter — previously syncIfDue() still ran its own `_isArchived` DB
+    // query internally for every non-Archiv project despite the caller
+    // already knowing the answer, i.e. ~90 redundant queries per watcher
+    // tick at real-world project counts (the exact fan-out shape the
+    // 2026-08-20 process-storm postmortem warns against).
+    ref.listen(projectsProvider, (previous, next) {
+      final projects = next.value;
+      if (projects == null) return;
+      final membership = ref.read(membershipProvider);
+      final notifier = ref.read(vaultStatusProvider.notifier);
+      for (final project in projects) {
+        final isArchived = membership[project.folderId] == kArchiveGroupId;
+        if (isArchived) continue;
+        unawaited(notifier.syncIfDue(project, isArchived: isArchived));
+      }
+    });
 
     final colors = Theme.of(context).extension<AppColors>()!;
     final openProject = ref.watch(openProjectDetailProvider);

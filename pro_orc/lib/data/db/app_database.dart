@@ -26,7 +26,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? e]) : super(e ?? _connect());
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -49,6 +49,17 @@ class AppDatabase extends _$AppDatabase {
           appConfigTable.projectOrganizationSeedApplied,
         );
         await m.createTable(groupCollapseStateTable);
+      }
+      if (from < 6) {
+        await m.addColumn(appConfigTable, appConfigTable.vaultHubFolder);
+        await m.addColumn(
+          projectSettingsTable,
+          projectSettingsTable.vaultHubSlug,
+        );
+        await m.addColumn(
+          projectSettingsTable,
+          projectSettingsTable.vaultLastSyncAt,
+        );
       }
     },
     beforeOpen: (details) async {
@@ -140,6 +151,7 @@ class AppDatabase extends _$AppDatabase {
     String? vaultDir,
     String? viewMode,
     bool? projectOrganizationSeedApplied,
+    String? vaultHubFolder,
   }) async {
     await (update(appConfigTable)..where((t) => t.id.equals(1))).write(
       AppConfigTableCompanion(
@@ -155,6 +167,9 @@ class AppDatabase extends _$AppDatabase {
         viewMode: viewMode != null ? Value(viewMode) : const Value.absent(),
         projectOrganizationSeedApplied: projectOrganizationSeedApplied != null
             ? Value(projectOrganizationSeedApplied)
+            : const Value.absent(),
+        vaultHubFolder: vaultHubFolder != null
+            ? Value(vaultHubFolder)
             : const Value.absent(),
       ),
     );
@@ -395,5 +410,54 @@ class AppDatabase extends _$AppDatabase {
   Future<void> markProjectOrganizationSeedApplied() async {
     await getConfig(); // ensure id=1 row exists
     await updateConfig(projectOrganizationSeedApplied: true);
+  }
+
+  /// Returns the configured vault hub folder convention (e.g. 'project').
+  /// Defaults to 'project' (via the column default) if never set.
+  Future<String> getVaultHubFolder() async {
+    final config = await getConfig();
+    return config.vaultHubFolder;
+  }
+
+  /// Persists the vault hub folder convention.
+  Future<void> setVaultHubFolder(String folder) async {
+    await getConfig(); // ensure id=1 row exists
+    await updateConfig(vaultHubFolder: folder);
+  }
+
+  /// Returns the confirmed vault hub slug for a project, or null when not
+  /// yet linked (or the project has no settings row yet).
+  Future<String?> getVaultHubSlug(String folderId) async {
+    final settings = await getProjectSettings(folderId);
+    return settings?.vaultHubSlug;
+  }
+
+  /// Persists the confirmed vault hub slug for a project. Pass `null` to
+  /// clear the link (falls back to fuzzy-match-or-auto-create).
+  Future<void> setVaultHubSlug(String folderId, String? slug) async {
+    await upsertProjectSettings(
+      ProjectSettingsTableCompanion.insert(
+        folderId: folderId,
+        vaultHubSlug: Value(slug),
+      ),
+    );
+  }
+
+  /// Returns the timestamp of the last automatic vault write for a project,
+  /// or null when it has never been written (or has no settings row yet).
+  Future<DateTime?> getVaultLastSyncAt(String folderId) async {
+    final settings = await getProjectSettings(folderId);
+    return settings?.vaultLastSyncAt;
+  }
+
+  /// Persists the timestamp of the last (automatic or manual) vault write
+  /// for a project. Pass `null` to clear it.
+  Future<void> setVaultLastSyncAt(String folderId, DateTime? at) async {
+    await upsertProjectSettings(
+      ProjectSettingsTableCompanion.insert(
+        folderId: folderId,
+        vaultLastSyncAt: Value(at),
+      ),
+    );
   }
 }

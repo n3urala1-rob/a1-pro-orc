@@ -27,4 +27,11 @@ class AppConfigTable extends Table {
   /// group exists regardless of this flag.
   BoolColumn get projectOrganizationSeedApplied =>
       boolean().withDefault(const Constant(false))();
+
+  /// Folder convention within [vaultDir] for project hubs (7-type-IA style),
+  /// e.g. 'project' for `project/<slug>.md`. Empty/default resolves to
+  /// 'project' — kept as an explicit column (not hardcoded) so the folder
+  /// name is user-configurable if their vault uses a different convention.
+  TextColumn get vaultHubFolder =>
+      text().withDefault(const Constant('project'))();
 }

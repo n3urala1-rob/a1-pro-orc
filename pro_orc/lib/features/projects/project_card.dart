@@ -144,6 +144,8 @@ class _ProjectCardState extends ConsumerState<ProjectCard> {
           buildProjectQuickActions(
             widget.project,
             ref.read(quickActionsProvider),
+            ref,
+            context,
           ),
           colors,
         ),

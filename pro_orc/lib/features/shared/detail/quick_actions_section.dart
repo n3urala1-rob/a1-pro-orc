@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:pro_orc/data/models/project_model.dart';
 import 'package:pro_orc/data/services/quick_actions_service.dart';
@@ -8,7 +9,12 @@ import 'package:pro_orc/theme/n3_colors.dart';
 
 /// Renders the quick-action button row at the bottom of
 /// [ProjectDetailPanel]'s "Übersicht" tab.
-class QuickActionsSection extends StatelessWidget {
+///
+/// `ConsumerWidget` (not `StatelessWidget`) so the "Jetzt synchronisieren"
+/// action's disabled-while-syncing state (FR-014, via
+/// `buildProjectQuickActions`'s `ref.watch(vaultStatusProvider)`) rebuilds
+/// this row when a write starts/finishes for [project].
+class QuickActionsSection extends ConsumerWidget {
   const QuickActionsSection({
     super.key,
     required this.project,
@@ -23,9 +29,9 @@ class QuickActionsSection extends StatelessWidget {
   final QuickActionsService qa;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final actions = [
-      ...buildProjectQuickActions(project, qa),
+      ...buildProjectQuickActions(project, qa, ref, context),
       QuickAction(
         icon: LucideIcons.sparkles100,
         tooltip: 'Mit Skill starten',
@@ -40,7 +46,10 @@ class QuickActionsSection extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.start,
       children: actions
-          .map((a) => _QuickActionButton(action: a, accent: accent, colors: colors))
+          .map(
+            (a) =>
+                _QuickActionButton(action: a, accent: accent, colors: colors),
+          )
           .toList(),
     );
   }
@@ -67,19 +76,27 @@ class _QuickActionButtonState extends State<_QuickActionButton> {
 
   @override
   Widget build(BuildContext context) {
+    final disabled = widget.action.disabled;
+    final iconColor = disabled
+        ? widget.colors.textDim.withValues(alpha: 0.35)
+        : (_hovered ? widget.accent : widget.colors.textDim);
+    final labelColor = disabled
+        ? widget.colors.textDim.withValues(alpha: 0.35)
+        : (_hovered ? widget.accent : widget.colors.textDim);
+
     return Padding(
       padding: const EdgeInsets.only(right: 8),
       child: MouseRegion(
         onEnter: (_) => setState(() => _hovered = true),
         onExit: (_) => setState(() => _hovered = false),
-        cursor: SystemMouseCursors.click,
+        cursor: disabled ? SystemMouseCursors.basic : SystemMouseCursors.click,
         child: GestureDetector(
-          onTap: widget.action.onPressed,
+          onTap: disabled ? null : widget.action.onPressed,
           child: Container(
             width: 64,
             height: 52,
             decoration: BoxDecoration(
-              color: _hovered
+              color: !disabled && _hovered
                   ? widget.accent.withValues(alpha: 0.1)
                   : Colors.transparent,
               borderRadius: BorderRadius.circular(8),
@@ -87,16 +104,12 @@ class _QuickActionButtonState extends State<_QuickActionButton> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(
-                  widget.action.icon,
-                  color: _hovered ? widget.accent : widget.colors.textDim,
-                  size: 18,
-                ),
+                Icon(widget.action.icon, color: iconColor, size: 18),
                 const SizedBox(height: 4),
                 Text(
                   widget.action.tooltip,
                   style: TextStyle(
-                    color: _hovered ? widget.accent : widget.colors.textDim,
+                    color: labelColor,
                     fontSize: 10,
                     fontWeight: FontWeight.w300,
                   ),

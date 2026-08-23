@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated": "2026-08-22T09:57:57.106Z",
+  "generated": "2026-08-23T14:09:15.464Z",
   "project": {
     "id": "pro-orc",
     "title": "Pro Orc",
@@ -70,7 +70,7 @@
     {
       "id": "m11-agentic-loop-foundation",
       "title": "Learning loop & second brain foundation",
-      "status": "in-progress",
+      "status": "done",
       "target": null
     },
     {
@@ -245,13 +245,13 @@
       "id": "015-learning-loop-automation",
       "milestone": "m11-agentic-loop-foundation",
       "title": "Learning automation: weekly scheduled check for >=5 learnings and MEMORY.md limit",
-      "status": "planned",
-      "stage": null,
+      "status": "done",
+      "stage": "done",
       "depends_on": [
         "012-close-learning-loop"
       ],
-      "started": null,
-      "finished": null,
+      "started": "2026-08-22",
+      "finished": "2026-08-22",
       "spec_path": null,
       "plan_path": null
     },
@@ -259,15 +259,15 @@
       "id": "016-vault-status-writer",
       "milestone": "m12-vault-integration",
       "title": "ProOrc writes project status into vault project hubs",
-      "status": "planned",
-      "stage": null,
+      "status": "done",
+      "stage": "done",
       "depends_on": [
         "013-vault-navigation-map"
       ],
-      "started": null,
-      "finished": null,
-      "spec_path": null,
-      "plan_path": null
+      "started": "2026-08-23",
+      "finished": "2026-08-23",
+      "spec_path": "projects/pro-orc/spec/010-vault-status-writer.md",
+      "plan_path": "projects/pro-orc/plans/010-vault-status-writer-wave-plan.md"
     },
     {
       "id": "017-skill-buttons-headless",
@@ -286,7 +286,7 @@
     }
   ],
   "next": null,
-  "cursor": "015-learning-loop-automation",
+  "cursor": "017-skill-buttons-headless",
   "vision": {
     "path": "docs/product/VISION.md",
     "updated": "2026-07-15",

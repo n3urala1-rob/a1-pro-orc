@@ -4,12 +4,11 @@
 
 # Pro Orc
 
-updated: 2026-08-22
+updated: 2026-08-23
 
 ## You are here
 
 - **m8-project-organization** — Project organization (target: unset)
-- **m11-agentic-loop-foundation** — Learning loop & second brain foundation (target: unset)
 
 ## In-flight features
 
@@ -17,7 +16,7 @@ None.
 
 ## Next cursor
 
-**015-learning-loop-automation** — recommended next feature (all dependencies (012-close-learning-loop) are done).
+**017-skill-buttons-headless** — recommended next feature (all dependencies (014-session-skill-mining, 016-vault-status-writer) are done).
 
 ## How to continue
 

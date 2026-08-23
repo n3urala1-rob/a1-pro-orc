@@ -4,7 +4,7 @@ type: roadmap
 project: pro-orc
 title: "Pro Orc"
 status: active
-updated: 2026-08-22
+updated: 2026-08-23
 source: "scaffolded by a1-tools product init"
 milestones:
   - id: m1-stabilization
@@ -49,7 +49,7 @@ milestones:
     target: null
   - id: m11-agentic-loop-foundation
     title: "Learning loop & second brain foundation"
-    status: in-progress
+    status: done
     target: null
   - id: m12-vault-integration
     title: "ProOrc vault integration & skill buttons"
@@ -191,25 +191,25 @@ features:
   - id: 015-learning-loop-automation
     milestone: m11-agentic-loop-foundation
     title: "Learning automation: weekly scheduled check for >=5 learnings and MEMORY.md limit"
-    status: planned
-    stage: null
+    status: done
+    stage: done
     depends_on:
       - 012-close-learning-loop
-    started: null
-    finished: null
+    started: 2026-08-22
+    finished: 2026-08-22
     spec_path: null
     plan_path: null
   - id: 016-vault-status-writer
     milestone: m12-vault-integration
     title: "ProOrc writes project status into vault project hubs"
-    status: planned
-    stage: null
+    status: done
+    stage: done
     depends_on:
       - 013-vault-navigation-map
-    started: null
-    finished: null
-    spec_path: null
-    plan_path: null
+    started: 2026-08-23
+    finished: 2026-08-23
+    spec_path: projects/pro-orc/spec/010-vault-status-writer.md
+    plan_path: projects/pro-orc/plans/010-vault-status-writer-wave-plan.md
   - id: 017-skill-buttons-headless
     milestone: m12-vault-integration
     title: "Skill buttons: one-click headless claude -p runs per project, output to vault"
@@ -237,12 +237,6 @@ None.
 
 ## Changelog
 
-- **2026-07-12** — project initialized — scaffolded by `product init`
-- **2026-07-12** — milestone 'm1-stabilization' added — Fix critical bugs and switch window activation policy dynamically.
-- **2026-07-12** — milestone 'm2-design-refresh' added — Ship a light glassmorphism theme with a mode switcher.
-- **2026-07-12** — milestone 'm3-agentic-os-views' added — Show agents and skills (global and project-local) as first-class tabs.
-- **2026-07-12** — milestone 'm4-sessions-graph' added — Show live Claude Code sessions and a mini collaboration graph per project.
-- **2026-07-12** — milestone 'm5-harness-visibility' added — Expose hooks, rules, permissions, MCP config, and a skill launcher.
 - **2026-07-12** — milestone 'm6-learning-loop' added — Surface a1 retros, patterns, and observations as a Learning tab.
 - **2026-07-12** — milestone 'm7-network-costs' added — Full network view, plugin skills, and token cost estimation.
 - **2026-07-12** — milestone 'm8-project-organization' added — Grid/list toggle, custom groups, and a1-SpecForge badge for organizing many projects.
@@ -332,6 +326,17 @@ None.
 - **2026-08-22** — 013-vault-navigation-map -> done — stage transition via `product stage`
 - **2026-08-22** — 014-session-skill-mining -> started — stage transition via `product stage`
 - **2026-08-22** — 014-session-skill-mining -> done — stage transition via `product stage`
+- **2026-08-22** — 015-learning-loop-automation -> started — stage transition via `product stage`
+- **2026-08-22** — 015-learning-loop-automation -> done — stage transition via `product stage`
+- **2026-08-22** — milestone m11-agentic-loop-foundation status -> done — marker set via `product markers --set`
+- **2026-08-23** — feature.md created for '016-vault-status-writer' — formal spec/plan attached via `product feature-init`
+- **2026-08-23** — 016-vault-status-writer -> started — stage transition via `product stage`
+- **2026-08-23** — 016-vault-status-writer -> complete — stage transition via `product stage`
+- **2026-08-23** — 016-vault-status-writer -> review — stage transition via `product stage`
+- **2026-08-23** — 016-vault-status-writer -> verify — stage transition via `product stage`
+- **2026-08-23** — 016-vault-status-writer -> merge — stage transition via `product stage`
+- **2026-08-23** — 016-vault-status-writer -> origin-cleanup — stage transition via `product stage`
+- **2026-08-23** — 016-vault-status-writer -> done — stage transition via `product stage`
 
 ## Appendix — migrated details
 

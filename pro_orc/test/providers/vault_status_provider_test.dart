@@ -185,11 +185,11 @@ void main() {
       await db.setProjectGroup('archived-proj', kArchiveGroupId);
       final project = _project('archived-proj');
 
-      final result = await notifier().syncNow(project);
+      final outcome = await notifier().syncNow(project);
 
       expect(fakeWriter.calls, isEmpty);
-      expect(result, isNot(equals(VaultWriteResult.written)));
-      expect(result, isNot(equals(VaultWriteResult.created)));
+      expect(outcome.isArchived, isTrue);
+      expect(outcome.didWrite, isFalse);
     });
 
     test(
@@ -219,10 +219,10 @@ void main() {
         expect(fakeWriter.calls.length, equals(1));
 
         fakeNow = fakeNow.add(const Duration(minutes: 1));
-        final result = await notifier().syncNow(project);
+        final outcome = await notifier().syncNow(project);
 
         expect(fakeWriter.calls.length, equals(2));
-        expect(result, equals(VaultWriteResult.created));
+        expect(outcome.writeResult, equals(VaultWriteResult.created));
       },
     );
   });
@@ -245,10 +245,8 @@ void main() {
 
         expect(fakeWriter.calls.length, equals(1));
         // The short-circuited call must not silently claim success.
-        expect(
-          results.where((r) => r == VaultWriteResult.created).length,
-          equals(1),
-        );
+        expect(results.where((r) => r.didWrite).length, equals(1));
+        expect(results.where((r) => r.isAlreadyInFlight).length, equals(1));
       },
     );
 
@@ -263,13 +261,44 @@ void main() {
         await Future.delayed(Duration.zero);
         // proj-b is not blocked by proj-a's in-flight write.
         fakeWriter.blockUntil!.complete();
-        final resultB = await notifier().syncNow(projectB);
+        final outcomeB = await notifier().syncNow(projectB);
         await callA;
 
-        expect(resultB, equals(VaultWriteResult.created));
+        expect(outcomeB.writeResult, equals(VaultWriteResult.created));
         expect(fakeWriter.calls.length, equals(2));
       },
     );
+
+    test('two syncIfDue calls for the same project in the same microtask turn '
+        'write exactly once (M-1, review round 1 regression)', () async {
+      // The exact scenario Reinhard's probe S exercised: syncIfDue used
+      // to perform `await _isArchived(...)` and `await
+      // db.getVaultLastSyncAt(...)` BEFORE claiming the in-flight guard,
+      // so two calls entering in the same microtask turn both observed
+      // an empty in-flight set and both proceeded to write — CALLS: 2,
+      // MAX_CONCURRENT: 2. The fix claims the guard synchronously as the
+      // very first statement, before any await.
+      final project = _project('proj-a');
+      fakeWriter.blockUntil = Completer<void>();
+
+      // Fire both calls back-to-back with NO await between them — this
+      // is the "same microtask turn" scenario; both synchronous prefixes
+      // (up to the first await) run before either yields control.
+      final first = notifier().syncIfDue(project);
+      final second = notifier().syncIfDue(project);
+
+      fakeWriter.blockUntil!.complete();
+      await Future.wait([first, second]);
+
+      expect(
+        fakeWriter.calls.length,
+        equals(1),
+        reason:
+            'Two syncIfDue calls in the same microtask turn must result '
+            'in exactly one write — the second must observe the '
+            'in-flight guard already claimed.',
+      );
+    });
   });
 
   group('vault unreachable (FR-016)', () {
@@ -291,10 +320,10 @@ void main() {
         await db.setVaultDir(p.join(vaultDir.path, 'does-not-exist'));
         final project = _project('proj-a');
 
-        final result = await notifier().syncNow(project);
+        final outcome = await notifier().syncNow(project);
 
         expect(fakeWriter.calls, isEmpty);
-        expect(result, equals(VaultWriteResult.skippedIoError));
+        expect(outcome.writeResult, equals(VaultWriteResult.skippedIoError));
       },
     );
   });
@@ -353,9 +382,9 @@ void main() {
       () async {
         final project = _project('brand-new-project');
 
-        final result = await notifier().syncNow(project);
+        final outcome = await notifier().syncNow(project);
 
-        expect(result, equals(VaultWriteResult.created));
+        expect(outcome.writeResult, equals(VaultWriteResult.created));
         expect(fakeWriter.calls.single['hubSlug'], equals('brand-new-project'));
       },
     );
@@ -364,14 +393,14 @@ void main() {
       await db.setVaultHubSlug('proj-a', 'confirmed-hub-slug');
       final project = _project('proj-a');
 
-      final result = await notifier().syncNow(project);
+      final outcome = await notifier().syncNow(project);
 
-      expect(result, equals(VaultWriteResult.created));
+      expect(outcome.writeResult, equals(VaultWriteResult.created));
       expect(fakeWriter.calls.single['hubSlug'], equals('confirmed-hub-slug'));
     });
 
     test(
-      'an unconfirmed fuzzy candidate is NOT auto-written to — no write happens',
+      'an unconfirmed fuzzy candidate: needsConfirmation, no write happens (M-5)',
       () async {
         final hubDir = Directory(p.join(vaultDir.path, 'project'));
         await hubDir.create(recursive: true);
@@ -380,11 +409,11 @@ void main() {
         ).writeAsString('---\n---\n');
 
         final project = _project('proj-a');
-        final result = await notifier().syncNow(project);
+        final outcome = await notifier().syncNow(project);
 
         expect(fakeWriter.calls, isEmpty);
-        expect(result, isNot(equals(VaultWriteResult.created)));
-        expect(result, isNot(equals(VaultWriteResult.written)));
+        expect(outcome.isNeedsConfirmation, isTrue);
+        expect(outcome.didWrite, isFalse);
       },
     );
   });

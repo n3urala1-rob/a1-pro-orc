@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:pro_orc/data/db/app_database.dart';
 import 'package:pro_orc/features/settings/settings_tab.dart';
 import 'package:pro_orc/providers/database_provider.dart';
+import 'package:pro_orc/providers/projects_provider.dart';
 import 'package:pro_orc/theme/n3_colors.dart';
 
 /// Fake for [FileSelectorPlatform] — the plugin's platform interface is
@@ -33,7 +34,19 @@ Future<ProviderContainer> _pump(WidgetTester tester) async {
   addTearDown(database.close);
 
   final container = ProviderContainer(
-    overrides: [appDatabaseProvider.overrideWithValue(database)],
+    overrides: [
+      appDatabaseProvider.overrideWithValue(database),
+      // Since Wave 4, SettingsTab renders VaultLinkCard, which reads
+      // vaultLinkStatusesProvider -> projectsProvider. Without this
+      // override, pumping SettingsTab triggers the REAL ProjectScanner +
+      // watcherProvider chain (a live DirectoryWatcher with background
+      // timers) — the same "real scan/watch chain" project_group_
+      // membership_provider_test.dart avoids with this exact override.
+      // Left unmocked, a test that pumpAndSettle()s long enough for the
+      // watcher's internal timer to fire hits "Timer still pending after
+      // dispose" at teardown.
+      projectsProvider.overrideWith((ref) async => []),
+    ],
   );
   addTearDown(container.dispose);
 
@@ -140,5 +153,119 @@ void main() {
       final config = await db.getConfig();
       expect('dist-artifacts'.allMatches(config.ignoreListJson).length, 1);
     });
+  });
+
+  group('Vault-Sync hub-folder field (M-4, review round 1)', () {
+    testWidgets(
+      'the field is pre-filled with the persisted vaultHubFolder value',
+      (tester) async {
+        final database = AppDatabase(NativeDatabase.memory());
+        addTearDown(database.close);
+        await database.setVaultHubFolder('records');
+
+        final container = ProviderContainer(
+          overrides: [
+            appDatabaseProvider.overrideWithValue(database),
+            // See _pump()'s matching override for why this is required.
+            projectsProvider.overrideWith((ref) async => []),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: MaterialApp(
+              theme: ThemeData.dark().copyWith(
+                extensions: const [AppColors.dark],
+              ),
+              home: const Scaffold(body: SettingsTab()),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final field = tester.widget<TextField>(
+          find.byWidgetPredicate(
+            (w) => w is TextField && w.controller?.text == 'records',
+          ),
+        );
+        expect(field.controller!.text, equals('records'));
+      },
+    );
+
+    testWidgets(
+      'editing the field and tapping Speichern calls setVaultHubFolder',
+      (tester) async {
+        final container = await _pump(tester);
+        final db = container.read(appDatabaseProvider);
+
+        expect(await db.getVaultHubFolder(), equals('project'));
+
+        // Identify the field by its HINT text ('project', from
+        // _saveVaultHubFolder's fallback), not its current controller
+        // text — the hint is stable across enterText, unlike the
+        // controller value, so finders built on top of it stay valid after
+        // editing (find.ancestor/descendant re-evaluate their `of:` finder
+        // lazily at use-time; a finder keyed on transient text silently
+        // resolves to zero widgets once that text changes).
+        final fieldFinder = find.byWidgetPredicate(
+          (w) => w is TextField && w.decoration?.hintText == 'project',
+        );
+        expect(fieldFinder, findsOneWidget);
+
+        final rowFinder = find.ancestor(
+          of: fieldFinder,
+          matching: find.byType(Row),
+        );
+        final saveButton = find.descendant(
+          of: rowFinder,
+          matching: find.widgetWithText(TextButton, 'Speichern'),
+        );
+        expect(saveButton, findsOneWidget);
+
+        await tester.enterText(fieldFinder, 'idea');
+        // The Vault-Sync section (further down the settings page) can push
+        // this row's Save button below the fold in the default 800x600
+        // test viewport — settings_tab.dart wraps everything in a
+        // SingleChildScrollView, so scroll it into view before tapping
+        // rather than tapping blind (a plain tap at an off-screen offset
+        // silently no-ops instead of registering).
+        await tester.ensureVisible(saveButton);
+        await tester.pumpAndSettle();
+        await tester.tap(saveButton);
+        await tester.pumpAndSettle();
+
+        expect(await db.getVaultHubFolder(), equals('idea'));
+      },
+    );
+
+    testWidgets(
+      'saving an empty value falls back to "project" rather than persisting blank',
+      (tester) async {
+        final container = await _pump(tester);
+        final db = container.read(appDatabaseProvider);
+
+        final fieldFinder = find.byWidgetPredicate(
+          (w) => w is TextField && w.decoration?.hintText == 'project',
+        );
+        final rowFinder = find.ancestor(
+          of: fieldFinder,
+          matching: find.byType(Row),
+        );
+        final saveButton = find.descendant(
+          of: rowFinder,
+          matching: find.widgetWithText(TextButton, 'Speichern'),
+        );
+
+        await tester.enterText(fieldFinder, '');
+        await tester.ensureVisible(saveButton);
+        await tester.pumpAndSettle();
+        await tester.tap(saveButton);
+        await tester.pumpAndSettle();
+
+        expect(await db.getVaultHubFolder(), equals('project'));
+      },
+    );
   });
 }

@@ -36,6 +36,7 @@ class _Harness extends ConsumerWidget {
       project,
       QuickActionsService(),
       ref,
+      context,
     );
     return buildQuickActionRow(actions, colors);
   }

@@ -31,7 +31,7 @@ class QuickActionsSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final actions = [
-      ...buildProjectQuickActions(project, qa, ref),
+      ...buildProjectQuickActions(project, qa, ref, context),
       QuickAction(
         icon: LucideIcons.sparkles100,
         tooltip: 'Mit Skill starten',

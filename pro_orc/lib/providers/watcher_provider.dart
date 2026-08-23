@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
 import 'package:watcher/watcher.dart';
 
+import 'package:pro_orc/data/services/vault_root_resolver.dart';
 import 'package:pro_orc/data/services/watcher_service.dart';
 import 'package:pro_orc/providers/database_provider.dart';
 
@@ -29,12 +30,12 @@ final watcherProvider = StreamProvider<WatchEvent>((ref) async* {
   // and it overlaps a scan dir, events under it are dropped as noise so a
   // VaultStatusWriter write never triggers a rescan of that scan dir — see
   // isNoiseEvent's vaultRoot doc for the self-trigger loop this closes.
-  // Same default-resolution convention as VaultStatusWriter's callers: an
-  // unset/empty DB value falls back to `$HOME/N3URAL-Vault`.
-  final rawVaultDir = await db.getVaultDir();
-  final vaultRoot =
-      rawVaultDir ??
-      p.join(Platform.environment['HOME'] ?? '/tmp', 'N3URAL-Vault');
+  // Uses the shared resolveVaultRoot (review round 1, m-7) — this call site
+  // previously had its own copy that treated an empty-string DB value as
+  // "configured" (only `null` triggered the fallback) while project_scanner
+  // and the writer required `.isNotEmpty`, silently disengaging this exact
+  // guard whenever vaultDir was set to `''`.
+  final vaultRoot = await resolveVaultRoot(db);
 
   final service = WatcherService.multi(allDirs, vaultRoot: vaultRoot);
   ref.onDispose(service.dispose);

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -5,6 +7,8 @@ import 'package:pro_orc/data/db/tables/project_groups_table.dart'
     show kArchiveGroupId;
 import 'package:pro_orc/data/models/project_model.dart';
 import 'package:pro_orc/data/services/quick_actions_service.dart';
+import 'package:pro_orc/data/services/vault_status_writer.dart'
+    show VaultWriteResult;
 import 'package:pro_orc/providers/project_group_membership_provider.dart';
 import 'package:pro_orc/providers/vault_status_provider.dart';
 import 'package:pro_orc/theme/n3_colors.dart';
@@ -36,10 +40,16 @@ class QuickAction {
 /// disabled-while-syncing state and `ref.read(vaultStatusProvider.notifier)`
 /// to fire `syncNow` — both call sites (`project_card.dart`,
 /// `quick_actions_section.dart`) already build inside a `Consumer*` widget.
+/// [context] is required so the sync action can surface feedback via
+/// [ScaffoldMessenger] (M-5, review round 1): previously the button's tap
+/// silently discarded `syncNow`'s result, so a project stuck in
+/// "needs confirmation" (an unconfirmed fuzzy-match candidate) gave the
+/// user zero explanation for why nothing happened.
 List<QuickAction> buildProjectQuickActions(
   ProjectModel project,
   QuickActionsService qa,
   WidgetRef ref,
+  BuildContext context,
 ) {
   // Archiv-group projects get no vault activity of any kind (FR-013) — the
   // action is omitted entirely rather than shown-but-disabled, since a
@@ -74,10 +84,54 @@ List<QuickAction> buildProjectQuickActions(
         disabled: ref.watch(
           vaultStatusProvider.select((s) => s.contains(project.folderId)),
         ),
-        onPressed: () =>
-            ref.read(vaultStatusProvider.notifier).syncNow(project),
+        onPressed: () => _syncNowWithFeedback(ref, context, project),
       ),
   ];
+}
+
+/// Fires `syncNow` and surfaces a snackbar for outcomes the user needs an
+/// explanation for (M-5): a pending fuzzy-match confirmation (routes them
+/// to the settings dialog) or a soft I/O failure. A successful write or the
+/// unremarkable "already in flight"/archived cases show nothing — those are
+/// either self-evident (the button re-enables) or don't need interrupting
+/// the user.
+void _syncNowWithFeedback(
+  WidgetRef ref,
+  BuildContext context,
+  ProjectModel project,
+) {
+  unawaited(
+    ref.read(vaultStatusProvider.notifier).syncNow(project).then((outcome) {
+      if (!context.mounted) return;
+      final messenger = ScaffoldMessenger.maybeOf(context);
+      if (messenger == null) return;
+
+      if (outcome.isNeedsConfirmation) {
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Zuordnung bestätigen — öffne Einstellungen → Vault-Sync, '
+              'um den vorgeschlagenen Hub zu bestätigen.',
+            ),
+          ),
+        );
+        return;
+      }
+
+      final result = outcome.writeResult;
+      if (result == VaultWriteResult.skippedIoError ||
+          result == VaultWriteResult.skippedLocked ||
+          result == VaultWriteResult.skippedOutsideRoot) {
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Synchronisierung fehlgeschlagen — Vault nicht erreichbar.',
+            ),
+          ),
+        );
+      }
+    }),
+  );
 }
 
 /// Builds a row of compact icon-only quick action buttons (for cards).

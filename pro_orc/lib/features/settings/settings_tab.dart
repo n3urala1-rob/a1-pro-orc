@@ -16,6 +16,7 @@ import 'package:pro_orc/providers/database_provider.dart';
 import 'package:pro_orc/providers/learning_provider.dart';
 import 'package:pro_orc/providers/projects_provider.dart';
 import 'package:pro_orc/providers/theme_mode_provider.dart';
+import 'package:pro_orc/providers/vault_link_statuses_provider.dart';
 import 'package:pro_orc/providers/vault_status_provider.dart';
 import 'package:pro_orc/providers/watcher_provider.dart';
 import 'package:pro_orc/theme/n3_colors.dart';
@@ -34,11 +35,13 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
   List<String> _ignorePatterns = [];
   String _gitBinaryPath = 'git';
   String _vaultDir = '';
+  String _vaultHubFolder = 'project';
   bool _launchAtLogin = false;
   bool _loading = true;
 
   final _gitController = TextEditingController();
   final _vaultController = TextEditingController();
+  final _vaultHubFolderController = TextEditingController();
 
   @override
   void initState() {
@@ -50,6 +53,7 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
   void dispose() {
     _gitController.dispose();
     _vaultController.dispose();
+    _vaultHubFolderController.dispose();
     super.dispose();
   }
 
@@ -57,6 +61,7 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
     final db = ref.read(appDatabaseProvider);
     final dirs = await db.getScanDirs();
     final config = await db.getConfig();
+    final hubFolder = await db.getVaultHubFolder();
 
     List<String> patterns = [];
     try {
@@ -89,6 +94,8 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
         _gitController.text = config.gitBinaryPath;
         _vaultDir = config.vaultDir;
         _vaultController.text = config.vaultDir;
+        _vaultHubFolder = hubFolder;
+        _vaultHubFolderController.text = hubFolder;
         _launchAtLogin = launchEnabled;
         _loading = false;
       });
@@ -169,6 +176,25 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
     final db = ref.read(appDatabaseProvider);
     await db.setVaultDir(value);
     ref.invalidate(learningProvider);
+  }
+
+  /// Persists the hub-folder convention (FR-001/FR-003 — M-4 fix, review
+  /// round 1): previously the DB column/accessor existed and was fully
+  /// tested, but no UI ever called `setVaultHubFolder`, leaving it
+  /// permanently `'project'` in practice. Falls back to `'project'` on an
+  /// empty save — the field is never allowed to end up truly blank, since
+  /// VaultStatusWriter always needs some folder name to target.
+  Future<void> _saveVaultHubFolder() async {
+    final raw = _vaultHubFolderController.text.trim();
+    final value = raw.isEmpty ? 'project' : raw;
+    if (value == _vaultHubFolder) return;
+    setState(() {
+      _vaultHubFolder = value;
+      _vaultHubFolderController.text = value;
+    });
+    final db = ref.read(appDatabaseProvider);
+    await db.setVaultHubFolder(value);
+    ref.invalidate(vaultLinkStatusesProvider);
   }
 
   // --- Launch at Login ---
@@ -404,6 +430,22 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Text(
+                  'Ordner-Konvention',
+                  style: TextStyle(
+                    color: colors.textSec,
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                _buildTextSettingRow(
+                  colors: colors,
+                  controller: _vaultHubFolderController,
+                  hintText: 'project',
+                  onSave: _saveVaultHubFolder,
+                ),
+                const SizedBox(height: 10),
                 Consumer(
                   builder: (context, ref, _) {
                     final reachableAsync = ref.watch(vaultReachableProvider);

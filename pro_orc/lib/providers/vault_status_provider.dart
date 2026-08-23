@@ -4,12 +4,14 @@ import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
 
+import 'package:pro_orc/data/db/app_database.dart';
 import 'package:pro_orc/data/db/tables/project_groups_table.dart'
     show kArchiveGroupId;
 import 'package:pro_orc/data/models/a1_data.dart';
 import 'package:pro_orc/data/models/project_model.dart';
 import 'package:pro_orc/data/models/vault_link_status.dart';
 import 'package:pro_orc/data/services/vault_hub_matcher.dart';
+import 'package:pro_orc/data/services/vault_root_resolver.dart';
 import 'package:pro_orc/data/services/vault_status_writer.dart';
 import 'package:pro_orc/providers/database_provider.dart';
 
@@ -63,27 +65,17 @@ final vaultStatusWriterProvider = Provider<VaultStatusWriter>(
 /// real 15-minute sleep — production code gets `DateTime.now`.
 final vaultClockProvider = Provider<DateTime Function()>((ref) => DateTime.now);
 
-/// Resolves the configured vault root the same way project_scanner.dart and
-/// watcher_provider.dart do: an unset/empty DB value falls back to
-/// `$HOME/N3URAL-Vault`.
-Future<String> _resolveVaultRoot(dynamic db) async {
-  final raw = await db.getVaultDir();
-  if (raw != null && (raw as String).isNotEmpty) return raw;
-  final home = Platform.environment['HOME'] ?? '/tmp';
-  return p.join(home, 'N3URAL-Vault');
-}
-
-/// Public read of the same resolution, for UI providers (Wave 4's vault-
-/// unreachable settings indicator) that need it without going through the
-/// notifier's private helper.
+/// Public read of the shared [resolveVaultRoot] resolution, for UI
+/// providers (Wave 4's vault-unreachable settings indicator) that need it
+/// reactively.
 final resolvedVaultRootProvider = FutureProvider<String>((ref) async {
   final db = ref.watch(appDatabaseProvider);
-  return _resolveVaultRoot(db);
+  return resolveVaultRoot(db);
 });
 
 /// True when the resolved vault root exists on disk — backs the settings
 /// screen's "Vault-Pfad nicht erreichbar" indicator (FR-016's UI half).
-/// Mirrors the same existence check [VaultStatusNotifier._writeAndRecord]
+/// Mirrors the same existence check [VaultStatusNotifier._performWrite]
 /// performs before attempting a write.
 final vaultReachableProvider = FutureProvider<bool>((ref) async {
   final root = await ref.watch(resolvedVaultRootProvider.future);
@@ -150,6 +142,54 @@ String _deriveMilestone(A1Data? a1) {
   return a1.milestones.first.name;
 }
 
+/// Outcome of a [VaultStatusNotifier.syncNow]/[VaultStatusNotifier.syncIfDue]
+/// call — a sealed-ish class (not a real `sealed` since it needs a `const`
+/// literal API for the fixed non-write sentinels) so callers can pattern-
+/// match on distinct states instead of overloading [VaultWriteResult] with
+/// meanings it was never designed for.
+///
+/// M-5 fix (review round 1): previously an unconfirmed fuzzy-match
+/// candidate reused [VaultWriteResult.skippedLocked] as a sentinel,
+/// indistinguishable from a real I/O failure — the project silently never
+/// synced and the manual "Jetzt synchronisieren" button gave the user zero
+/// feedback about why. [needsConfirmation] is now a distinct, UI-visible
+/// state.
+class VaultStatusSyncOutcome {
+  final VaultWriteResult? writeResult;
+  final bool isNeedsConfirmation;
+  final bool isArchived;
+  final bool isAlreadyInFlight;
+
+  const VaultStatusSyncOutcome.result(VaultWriteResult result)
+    : writeResult = result,
+      isNeedsConfirmation = false,
+      isArchived = false,
+      isAlreadyInFlight = false;
+
+  const VaultStatusSyncOutcome.needsConfirmation()
+    : writeResult = null,
+      isNeedsConfirmation = true,
+      isArchived = false,
+      isAlreadyInFlight = false;
+
+  const VaultStatusSyncOutcome.archived()
+    : writeResult = null,
+      isNeedsConfirmation = false,
+      isArchived = true,
+      isAlreadyInFlight = false;
+
+  const VaultStatusSyncOutcome.alreadyInFlight()
+    : writeResult = null,
+      isNeedsConfirmation = false,
+      isArchived = false,
+      isAlreadyInFlight = true;
+
+  /// True when a hub was actually written to (created or updated).
+  bool get didWrite =>
+      writeResult == VaultWriteResult.written ||
+      writeResult == VaultWriteResult.created;
+}
+
 /// Orchestrates the vault-write pipeline: value-equality change detection
 /// (FR-012), the 15-minute automatic-write debounce, Archiv-group exclusion
 /// (FR-013), hub resolution (confirmed link, or fuzzy-match-candidate vs.
@@ -195,99 +235,135 @@ class VaultStatusNotifier extends Notifier<Set<String>> {
   /// 15-minute debounce interval has elapsed (or no automatic write has
   /// ever happened) — and only for a project not in the Archiv group.
   /// Silently no-ops otherwise; never throws.
+  ///
+  /// M-1 fix (review round 1): the in-flight guard is claimed
+  /// SYNCHRONOUSLY as the very first statement — before any `await`, not
+  /// after the archived/debounce checks that used to precede it. Two
+  /// `syncIfDue` calls for the same project entering in the same
+  /// microtask turn previously both observed an empty in-flight set and
+  /// both proceeded to write (the checks happened, then two `await`s ran,
+  /// THEN both marked in-flight — too late). Claiming the guard first and
+  /// releasing it in every early-return path (via `finally`) closes that
+  /// window entirely; every exit — archived, unchanged tuple, debounce not
+  /// elapsed, or an actual write — goes through the same `try/finally`.
   Future<void> syncIfDue(ProjectModel project) async {
-    if (await _isArchived(project.folderId)) return;
-    if (isSyncing(project.folderId)) return;
+    if (!_tryClaimInFlight(project.folderId)) return;
+    try {
+      if (await _isArchived(project.folderId)) return;
 
-    final db = ref.read(appDatabaseProvider);
-    final tuple = _computeTuple(project);
-    final lastTuple = _lastWrittenTuple[project.folderId];
-    if (lastTuple == tuple) return; // FR-012 value-equality gate
+      final db = ref.read(appDatabaseProvider);
+      final tuple = _computeTuple(project);
+      final lastTuple = _lastWrittenTuple[project.folderId];
+      if (lastTuple == tuple) return; // FR-012 value-equality gate
 
-    final lastSyncAt = await db.getVaultLastSyncAt(project.folderId);
-    final now = ref.read(vaultClockProvider)();
-    if (lastSyncAt != null && now.difference(lastSyncAt) < vaultSyncDebounce) {
-      return; // debounce interval not yet elapsed
+      final lastSyncAt = await db.getVaultLastSyncAt(project.folderId);
+      final now = ref.read(vaultClockProvider)();
+      if (lastSyncAt != null &&
+          now.difference(lastSyncAt) < vaultSyncDebounce) {
+        return; // debounce interval not yet elapsed
+      }
+
+      await _performWrite(project, tuple);
+    } finally {
+      _clearInFlight(project.folderId);
     }
-
-    await _writeAndRecord(project, tuple, isManual: false);
   }
 
   /// Manual path (Wave 4's "Jetzt synchronisieren" button): bypasses the
   /// 15-minute debounce (FR-014), but still respects Archiv exclusion
   /// (FR-013) and per-project serialization. Returns the writer's result,
-  /// or [VaultWriteResult.skippedLocked] as an "already in flight, no-op"
-  /// sentinel when a write for this project is already running — the
-  /// caller's UI treats both as "nothing to show the user", per FR-014's
-  /// "disabled/ignored" wording.
-  Future<VaultWriteResult> syncNow(ProjectModel project) async {
-    if (await _isArchived(project.folderId)) {
-      return VaultWriteResult.skippedLocked;
+  /// a [VaultStatusSyncOutcome.needsConfirmation] sentinel when a fuzzy
+  /// suggestion exists but is unconfirmed (M-5 — distinct from a real
+  /// failure so the UI can tell the user why nothing happened instead of
+  /// silently doing nothing), or [VaultStatusSyncOutcome.alreadyInFlight]
+  /// when a write for this project is already running.
+  ///
+  /// M-1 fix: same synchronous-claim-first discipline as [syncIfDue] — see
+  /// its doc comment.
+  Future<VaultStatusSyncOutcome> syncNow(ProjectModel project) async {
+    if (!_tryClaimInFlight(project.folderId)) {
+      return const VaultStatusSyncOutcome.alreadyInFlight();
     }
-    if (isSyncing(project.folderId)) {
-      return VaultWriteResult.skippedLocked;
-    }
-
-    final tuple = _computeTuple(project);
-    return _writeAndRecord(project, tuple, isManual: true);
-  }
-
-  Future<VaultWriteResult> _writeAndRecord(
-    ProjectModel project,
-    _StatusTuple tuple, {
-    required bool isManual,
-  }) async {
-    _markInFlight(project.folderId);
     try {
-      final db = ref.read(appDatabaseProvider);
-      final vaultRoot = await _resolveVaultRoot(db);
-      if (!await Directory(vaultRoot).exists()) {
-        return VaultWriteResult.skippedIoError;
+      if (await _isArchived(project.folderId)) {
+        return const VaultStatusSyncOutcome.archived();
       }
 
-      final hubFolder = await db.getVaultHubFolder();
-      final hubSlug = await _resolveHubSlug(db, project, vaultRoot, hubFolder);
-      if (hubSlug == null) {
-        // Has a fuzzy candidate but no confirmed link yet — Wave 4's
-        // confirmation UI owns turning that into a confirmed link; this
-        // wave never auto-writes to a merely-suggested (unconfirmed) hub.
-        return VaultWriteResult.skippedLocked;
-      }
-
-      final now = ref.read(vaultClockProvider)();
-      final writer = ref.read(vaultStatusWriterProvider);
-      final result = await writer.write(
-        vaultRoot: vaultRoot,
-        hubFolder: hubFolder,
-        hubSlug: hubSlug,
-        displayName: project.displayName,
-        fields: VaultStatusFields(
-          status: tuple.status,
-          progress: tuple.progress,
-          phase: tuple.phase,
-          milestone: tuple.milestone,
-          lastCommit: tuple.lastCommit,
-          lastSync: now,
-        ),
-      );
-
-      if (result == VaultWriteResult.written ||
-          result == VaultWriteResult.created) {
-        _lastWrittenTuple[project.folderId] = tuple;
-        await db.setVaultLastSyncAt(project.folderId, now);
-        if (hubSlug != await db.getVaultHubSlug(project.folderId)) {
-          await db.setVaultHubSlug(project.folderId, hubSlug);
-        }
-      }
-      // Soft-fail results (skippedLocked/skippedIoError/skippedOutsideRoot)
-      // deliberately do NOT update vaultLastSyncAt (FR-017) — the next
-      // regular trigger (automatic tick or manual click) retries
-      // independently, with no special-cased retry logic here.
-
-      return result;
+      final tuple = _computeTuple(project);
+      return await _performWrite(project, tuple);
     } finally {
       _clearInFlight(project.folderId);
     }
+  }
+
+  /// Atomically checks-and-claims the in-flight guard for [folderId] in one
+  /// synchronous step (no `await` between the check and the claim) — the
+  /// actual fix for M-1. Returns true (claimed) if [folderId] was not
+  /// already in the set; false (not claimed, caller must not proceed) if
+  /// it was.
+  bool _tryClaimInFlight(String folderId) {
+    if (state.contains(folderId)) return false;
+    _markInFlight(folderId);
+    return true;
+  }
+
+  Future<VaultStatusSyncOutcome> _performWrite(
+    ProjectModel project,
+    _StatusTuple tuple,
+  ) async {
+    final db = ref.read(appDatabaseProvider);
+    final vaultRoot = await resolveVaultRoot(db);
+    if (!await Directory(vaultRoot).exists()) {
+      return const VaultStatusSyncOutcome.result(
+        VaultWriteResult.skippedIoError,
+      );
+    }
+
+    final hubFolder = await db.getVaultHubFolder();
+    final hubSlug = await _resolveHubSlug(db, project, vaultRoot, hubFolder);
+    if (hubSlug == null) {
+      // M-5 fix (review round 1): a fuzzy candidate exists but is
+      // unconfirmed — Wave 4's confirmation UI owns turning that into a
+      // confirmed link. Previously this reused VaultWriteResult.skippedLocked
+      // as a sentinel, which is indistinguishable from a real I/O failure
+      // and meant the project deadlocked (never synced, no error, no
+      // explanation) until the user happened to open the settings dialog.
+      // A distinct outcome lets the UI surface "Zuordnung bestätigen"
+      // instead of silently doing nothing.
+      return const VaultStatusSyncOutcome.needsConfirmation();
+    }
+
+    final now = ref.read(vaultClockProvider)();
+    final writer = ref.read(vaultStatusWriterProvider);
+    final result = await writer.write(
+      vaultRoot: vaultRoot,
+      hubFolder: hubFolder,
+      hubSlug: hubSlug,
+      displayName: project.displayName,
+      fields: VaultStatusFields(
+        status: tuple.status,
+        progress: tuple.progress,
+        phase: tuple.phase,
+        milestone: tuple.milestone,
+        lastCommit: tuple.lastCommit,
+        lastSync: now,
+      ),
+    );
+
+    if (result == VaultWriteResult.written ||
+        result == VaultWriteResult.created) {
+      _lastWrittenTuple[project.folderId] = tuple;
+      await db.setVaultLastSyncAt(project.folderId, now);
+      if (hubSlug != await db.getVaultHubSlug(project.folderId)) {
+        await db.setVaultHubSlug(project.folderId, hubSlug);
+      }
+    }
+    // Soft-fail results (skippedLocked/skippedIoError/skippedOutsideRoot)
+    // deliberately do NOT update vaultLastSyncAt (FR-017) — the next
+    // regular trigger (automatic tick or manual click) retries
+    // independently, with no special-cased retry logic here.
+
+    return VaultStatusSyncOutcome.result(result);
   }
 
   /// Resolves which hub slug to write to: the confirmed link if one exists,
@@ -296,12 +372,12 @@ class VaultStatusNotifier extends Notifier<Set<String>> {
   /// (no candidate at all) the project's own folderId as the auto-create
   /// slug (FR-006).
   Future<String?> _resolveHubSlug(
-    dynamic db,
+    AppDatabase db,
     ProjectModel project,
     String vaultRoot,
     String hubFolder,
   ) async {
-    final confirmed = await db.getVaultHubSlug(project.folderId) as String?;
+    final confirmed = await db.getVaultHubSlug(project.folderId);
     if (confirmed != null && confirmed.isNotEmpty) return confirmed;
 
     final candidateStems = await _existingHubStems(vaultRoot, hubFolder);
@@ -346,7 +422,7 @@ class VaultStatusNotifier extends Notifier<Set<String>> {
   /// preview the state a manual unarchive would restore).
   Future<VaultLinkStatus> linkStatusFor(ProjectModel project) async {
     final db = ref.read(appDatabaseProvider);
-    final vaultRoot = await _resolveVaultRoot(db);
+    final vaultRoot = await resolveVaultRoot(db);
     final hubFolder = await db.getVaultHubFolder();
 
     final confirmed = await db.getVaultHubSlug(project.folderId);

@@ -15,6 +15,7 @@ import 'package:pro_orc/data/services/git_reader.dart';
 import 'package:pro_orc/data/services/memory_reader.dart';
 import 'package:pro_orc/data/services/project_importer_service.dart';
 import 'package:pro_orc/data/services/project_metadata_reader.dart';
+import 'package:pro_orc/data/services/vault_root_resolver.dart';
 
 // ---------------------------------------------------------------------------
 // Errors
@@ -282,7 +283,7 @@ class ProjectScanner {
     // (VaultStatusWriter), not a scannable project. Resolved the same way
     // watcher_provider.dart resolves it for isNoiseEvent's vaultRoot param,
     // so both halves of FR-022's guard agree on what "the vault" means.
-    final vaultRoot = await _resolveVaultRoot();
+    final vaultRoot = await resolveVaultRoot(_db);
     final projectPaths = rawProjectPaths
         .where((path) => !_isUnderVaultRoot(path, vaultRoot))
         .toList();
@@ -422,19 +423,6 @@ class ProjectScanner {
     }
 
     return paths;
-  }
-
-  /// Resolves the configured Obsidian vault root the same way
-  /// watcher_provider.dart resolves it for [isNoiseEvent]'s `vaultRoot`
-  /// param: an unset/empty DB value falls back to `$HOME/N3URAL-Vault`
-  /// (never null) — the vault always has *some* resolved location, so
-  /// project-listing exclusion (FR-022b) always applies, not just when the
-  /// user has explicitly configured a custom path.
-  Future<String> _resolveVaultRoot() async {
-    final raw = await _db.getVaultDir();
-    if (raw != null && raw.isNotEmpty) return p.normalize(raw);
-    final home = Platform.environment['HOME'] ?? '/tmp';
-    return p.normalize(p.join(home, 'N3URAL-Vault'));
   }
 
   /// Returns true if [path] is the vault root itself or nested inside it.

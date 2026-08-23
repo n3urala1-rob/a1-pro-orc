@@ -694,6 +694,63 @@ void main() {
         },
       );
     });
+
+    // -----------------------------------------------------------------------
+    // Vault-root exclusion (010-vault-status-writer FR-022b)
+    // -----------------------------------------------------------------------
+
+    group('vault-root exclusion (FR-022b)', () {
+      test('a vault root nested inside the scan dir is never listed as a '
+          'project, even though it looks like a plain directory', () async {
+        final vaultDir = Directory(p.join(scanRoot.path, 'MyVault'));
+        await vaultDir.create(recursive: true);
+        await db.setVaultDir(vaultDir.path);
+
+        // A real project alongside it must still be found.
+        await createPlainProject(scanRoot, 'real-project');
+
+        final results = await scanner.scanAll(scanDirOverride: scanRoot.path);
+
+        expect(
+          results.any((p) => p.path == vaultDir.path),
+          isFalse,
+          reason:
+              'The configured vault root must never appear as a '
+              'ProjectModel, per FR-022b.',
+        );
+        expect(results.any((p) => p.folderId == 'real-project'), isTrue);
+      });
+
+      test(
+        'a project directory nested INSIDE the vault root is also excluded',
+        () async {
+          final vaultDir = Directory(p.join(scanRoot.path, 'MyVault'));
+          await vaultDir.create(recursive: true);
+          await db.setVaultDir(vaultDir.path);
+
+          // Something that looks like a project, but lives under the vault.
+          await createPlainProject(vaultDir, 'hub-that-looks-like-a-project');
+          await createPlainProject(scanRoot, 'real-project');
+
+          final results = await scanner.scanAll(scanDirOverride: scanRoot.path);
+
+          expect(
+            results.any((p) => p.folderId == 'hub-that-looks-like-a-project'),
+            isFalse,
+          );
+          expect(results.any((p) => p.folderId == 'real-project'), isTrue);
+        },
+      );
+
+      test('no vault configured (default resolution) does not exclude '
+          'unrelated project directories', () async {
+        await createPlainProject(scanRoot, 'real-project');
+
+        final results = await scanner.scanAll(scanDirOverride: scanRoot.path);
+
+        expect(results.any((p) => p.folderId == 'real-project'), isTrue);
+      });
+    });
   });
 }
 

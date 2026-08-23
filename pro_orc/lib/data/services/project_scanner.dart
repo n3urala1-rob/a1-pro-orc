@@ -264,17 +264,28 @@ class ProjectScanner {
     }
 
     // --- 2. List project directories from all scan dirs ---
-    final projectPaths = <String>[];
+    final rawProjectPaths = <String>[];
     for (final scanDir in scanDirs) {
       try {
         final paths = await _listProjectPaths(scanDir, ignorePatterns);
-        projectPaths.addAll(paths);
+        rawProjectPaths.addAll(paths);
       } on ScanDirectoryNotFoundError {
         // When using a single override, propagate the error.
         // For multi-dir configs, skip non-existent dirs gracefully.
         if (scanDirOverride != null) rethrow;
       }
     }
+
+    // Vault-root exclusion (010-vault-status-writer FR-022b): the vault
+    // MUST NOT be listed as a project even when it happens to sit inside
+    // (or equal) a configured scan dir — it is a writer target
+    // (VaultStatusWriter), not a scannable project. Resolved the same way
+    // watcher_provider.dart resolves it for isNoiseEvent's vaultRoot param,
+    // so both halves of FR-022's guard agree on what "the vault" means.
+    final vaultRoot = await _resolveVaultRoot();
+    final projectPaths = rawProjectPaths
+        .where((path) => !_isUnderVaultRoot(path, vaultRoot))
+        .toList();
 
     if (projectPaths.isEmpty) {
       return [];
@@ -411,6 +422,30 @@ class ProjectScanner {
     }
 
     return paths;
+  }
+
+  /// Resolves the configured Obsidian vault root the same way
+  /// watcher_provider.dart resolves it for [isNoiseEvent]'s `vaultRoot`
+  /// param: an unset/empty DB value falls back to `$HOME/N3URAL-Vault`
+  /// (never null) — the vault always has *some* resolved location, so
+  /// project-listing exclusion (FR-022b) always applies, not just when the
+  /// user has explicitly configured a custom path.
+  Future<String> _resolveVaultRoot() async {
+    final raw = await _db.getVaultDir();
+    if (raw != null && raw.isNotEmpty) return p.normalize(raw);
+    final home = Platform.environment['HOME'] ?? '/tmp';
+    return p.normalize(p.join(home, 'N3URAL-Vault'));
+  }
+
+  /// Returns true if [path] is the vault root itself or nested inside it.
+  bool _isUnderVaultRoot(String path, String vaultRoot) {
+    final normalizedPath = p.normalize(path);
+    final normalizedRoot = p.normalize(vaultRoot);
+    if (normalizedPath == normalizedRoot) return true;
+    final rootWithSep = normalizedRoot.endsWith(p.separator)
+        ? normalizedRoot
+        : '$normalizedRoot${p.separator}';
+    return normalizedPath.startsWith(rootWithSep);
   }
 
   /// Returns true if [path] looks like a project directory

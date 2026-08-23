@@ -63,8 +63,20 @@ bool _isAllowedClaudeHomePath(List<String> pathAfterClaudeHome) {
 
 /// Returns true for filesystem events that must not trigger a rescan.
 ///
-/// Two different policies apply depending on where [path] lives:
+/// Three different policies apply depending on where [path] lives:
 ///
+/// - Under the configured Obsidian vault root ([vaultRoot], when it is
+///   non-null and overlaps a scan dir): **always noise** — no partial
+///   allowlist, unlike `~/.claude/`. Vault content is never displayed by
+///   this dashboard (unlike `~/.claude/`, which the Claude Tools tab and
+///   memory indicator partially read), so there is no legitimate reason for
+///   a change under the vault root to trigger a project rescan. This closes
+///   the vault-write → watcher → rescan → vault-write self-trigger loop
+///   (010-vault-status-writer FR-022a) — without it, `VaultStatusWriter`
+///   writing a hub file inside a scan dir would itself fire a new watcher
+///   event, which would trigger another sync cycle, which would write
+///   again, indefinitely, mirroring the exact "missing_wiring" root-cause
+///   class the 2026-08-20 process-storm postmortem flagged.
 /// - Under `~/.claude/`: **allowlist**. Only paths the dashboard actually
 ///   reads (skills/, agents/, plugins/installed_plugins.json,
 ///   plugins/known_marketplaces.json, settings.json,
@@ -78,7 +90,19 @@ bool _isAllowedClaudeHomePath(List<String> pathAfterClaudeHome) {
 ///   `node_modules`, `.dart_tool`, build output, etc. are dropped, but
 ///   ordinary project files, `.planning/`, `.a1/`, and `.git/HEAD`/`refs`
 ///   (commit signal) always pass through.
-bool isNoiseEvent(String path) {
+///
+/// [vaultRoot] is optional (defaults to `null`, meaning "no vault exclusion
+/// configured/known") so every existing call site and test keeps working
+/// unchanged; only [WatcherService] (via [WatcherService.multi]'s
+/// `vaultRootOverride`) passes a resolved value.
+bool isNoiseEvent(String path, {String? vaultRoot}) {
+  if (vaultRoot != null && vaultRoot.isNotEmpty) {
+    final normalizedRoot = vaultRoot.endsWith('/') ? vaultRoot : '$vaultRoot/';
+    if (path == vaultRoot || path.startsWith(normalizedRoot)) {
+      return true;
+    }
+  }
+
   final segments = path.split('/');
 
   final claudeIndex = segments.indexOf('.claude');
@@ -109,15 +133,23 @@ bool isNoiseEvent(String path) {
 /// gets its own [DirectoryWatcher] and events are merged into a single stream.
 class WatcherService {
   final List<String> _dirs;
+  final String? _vaultRoot;
   final List<DirectoryWatcher> _watchers = [];
   late final StreamController<WatchEvent> _controller;
   final List<StreamSubscription<WatchEvent>> _subs = [];
 
-  WatcherService(String singleDir) : _dirs = [singleDir] {
+  WatcherService(String singleDir, {String? vaultRoot})
+    : _dirs = [singleDir],
+      _vaultRoot = vaultRoot {
     _init();
   }
 
-  WatcherService.multi(this._dirs) {
+  /// [vaultRoot]: resolved absolute path to the configured Obsidian vault
+  /// root, or `null`/empty when no vault is configured. When it overlaps one
+  /// of [dirs], events under it are dropped as noise (see [isNoiseEvent]) so
+  /// a vault write never triggers a rescan of the scan dir that contains it.
+  WatcherService.multi(this._dirs, {String? vaultRoot})
+    : _vaultRoot = vaultRoot {
     _init();
   }
 
@@ -130,7 +162,8 @@ class WatcherService {
 
       final sub = watcher.events.listen(
         (event) {
-          if (!_controller.isClosed && !isNoiseEvent(event.path)) {
+          if (!_controller.isClosed &&
+              !isNoiseEvent(event.path, vaultRoot: _vaultRoot)) {
             _controller.add(event);
           }
         },

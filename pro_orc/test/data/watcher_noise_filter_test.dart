@@ -159,5 +159,63 @@ void main() {
         expect(isNoiseEvent('/Users/rob/.claude/settings.json'), isFalse);
       });
     });
+
+    // --- vault root exclusion (010-vault-status-writer FR-022a) -----------
+    //
+    // Unlike ~/.claude/, the vault root has no partial allowlist — no vault
+    // content is ever displayed by this dashboard, so any change under it
+    // is always noise when it overlaps a scan dir. This closes the
+    // vault-write -> watcher -> rescan -> vault-write self-trigger loop.
+
+    group('vault root exclusion (when configured)', () {
+      const vaultRoot = '/Users/rob/N3URAL-Vault';
+
+      test('drops a hub file write under the vault root', () {
+        expect(
+          isNoiseEvent('$vaultRoot/project/pro-orc.md', vaultRoot: vaultRoot),
+          isTrue,
+        );
+      });
+
+      test('drops a path equal to the vault root itself', () {
+        expect(isNoiseEvent(vaultRoot, vaultRoot: vaultRoot), isTrue);
+      });
+
+      test('a vault-root path would otherwise pass the .claude allowlist — '
+          'still dropped because vault exclusion is checked first', () {
+        // Simulate the vault living under a directory segment that would
+        // pass the .claude allowlist if that logic ran on it (it won't,
+        // because the vault check short-circuits first).
+        const nestedVaultRoot = '/Users/rob/.claude/skills/fake-vault-for-test';
+        expect(
+          isNoiseEvent(
+            '$nestedVaultRoot/project/pro-orc.md',
+            vaultRoot: nestedVaultRoot,
+          ),
+          isTrue,
+        );
+      });
+
+      test('does not affect paths outside the vault root', () {
+        expect(
+          isNoiseEvent(
+            '/Users/rob/code/app/lib/main.dart',
+            vaultRoot: vaultRoot,
+          ),
+          isFalse,
+        );
+      });
+
+      test('null vaultRoot (not configured) exempts nothing — no crash', () {
+        expect(isNoiseEvent('$vaultRoot/project/pro-orc.md'), isFalse);
+      });
+
+      test('empty-string vaultRoot is treated as "not configured"', () {
+        expect(
+          isNoiseEvent('$vaultRoot/project/pro-orc.md', vaultRoot: ''),
+          isFalse,
+        );
+      });
+    });
   });
 }

@@ -217,4 +217,118 @@ void main() {
           'but got: $errors',
     );
   });
+
+  // ---------------------------------------------------------------------------
+  // Test 5: vault self-trigger loop proof (010-vault-status-writer FR-022a)
+  // ---------------------------------------------------------------------------
+  //
+  // This is the end-to-end proof that the vault-write -> watcher -> rescan
+  // -> vault-write loop cannot happen: a real WatcherService (not just the
+  // pure isNoiseEvent function) watches a scan dir that CONTAINS the vault
+  // root as a subdirectory — the exact "vault root overlaps a scan dir"
+  // configuration FR-022a describes. A file write simulating
+  // VaultStatusWriter's own hub write lands inside that vault subdirectory.
+  // If the guard were missing/broken, this write would surface as a
+  // WatchEvent (the same event projects_provider.dart's ref.listen uses to
+  // call coalescer.requestRescan -> ref.invalidateSelf -> a second scan ->
+  // a second vault write, unboundedly). Asserting zero events proves no
+  // rescan is triggered, which transitively proves no second write follows
+  // (this service never even surfaces the first write as an event for a
+  // rescan to react to).
+  group('vault self-trigger loop guard (FR-022a)', () {
+    late Directory scanDir;
+    late Directory vaultSubDir;
+    late WatcherService vaultAwareService;
+    late List<StreamSubscription> vaultAwareSubs;
+
+    setUp(() {
+      scanDir = Directory.systemTemp.createTempSync('watcher_vault_scan_');
+      vaultSubDir = Directory('${scanDir.path}/N3URAL-Vault')
+        ..createSync(recursive: true);
+      Directory('${vaultSubDir.path}/project').createSync(recursive: true);
+      vaultAwareSubs = [];
+    });
+
+    tearDown(() async {
+      for (final sub in vaultAwareSubs) {
+        await sub.cancel();
+      }
+      await vaultAwareService.dispose();
+      if (scanDir.existsSync()) {
+        scanDir.deleteSync(recursive: true);
+      }
+    });
+
+    test(
+      'a hub write inside the vault root never surfaces as a WatchEvent, '
+      'even though the vault root is nested inside a watched scan dir',
+      () async {
+        vaultAwareService = WatcherService.multi([
+          scanDir.path,
+        ], vaultRoot: vaultSubDir.path);
+
+        final events = <WatchEvent>[];
+        final sub = vaultAwareService.events.listen(events.add);
+        vaultAwareSubs.add(sub);
+
+        await vaultAwareService.ready;
+
+        // Simulate VaultStatusWriter writing a hub file inside the vault
+        // root — the exact operation that, without the guard, would
+        // trigger projects_provider's watcher-driven rescan.
+        final hub = File('${vaultSubDir.path}/project/pro-orc.md');
+        await hub.writeAsString('---\ntype: project\n---\n');
+
+        // Give the (guarded) event pipeline the same window the other tests
+        // use to prove absence, not just late arrival.
+        await Future.delayed(const Duration(seconds: 4));
+
+        expect(
+          events,
+          isEmpty,
+          reason:
+              'A write inside the vault root must never surface as a '
+              'WatchEvent — otherwise projects_provider would coalesce a '
+              'rescan from it, closing the loop this guard exists to break. '
+              'Got: ${events.map((e) => e.path).toList()}',
+        );
+      },
+    );
+
+    test(
+      'a write OUTSIDE the vault root (but inside the same scan dir) still '
+      'surfaces normally — the guard only excludes the vault subtree',
+      () async {
+        vaultAwareService = WatcherService.multi([
+          scanDir.path,
+        ], vaultRoot: vaultSubDir.path);
+
+        final events = <WatchEvent>[];
+        final completer = Completer<void>();
+        final sub = vaultAwareService.events.listen((event) {
+          events.add(event);
+          if (!completer.isCompleted) completer.complete();
+        });
+        vaultAwareSubs.add(sub);
+
+        await vaultAwareService.ready;
+
+        final ordinaryFile = File('${scanDir.path}/some_project/README.md');
+        await ordinaryFile.parent.create(recursive: true);
+        await ordinaryFile.writeAsString('# hello');
+
+        await completer.future.timeout(
+          const Duration(seconds: 6),
+          onTimeout: () => throw TimeoutException(
+            'Expected a WatchEvent for a write outside the vault root, but '
+            'none arrived — the vault guard must not over-exclude the rest '
+            'of the scan dir.',
+            const Duration(seconds: 6),
+          ),
+        );
+
+        expect(events, isNotEmpty);
+      },
+    );
+  });
 }

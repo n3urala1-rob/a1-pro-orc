@@ -25,7 +25,18 @@ final watcherProvider = StreamProvider<WatchEvent>((ref) async* {
   );
   final allDirs = [...scanDirs, claudeProjectsDir];
 
-  final service = WatcherService.multi(allDirs);
+  // Resolved vault root (010-vault-status-writer FR-022a): when configured
+  // and it overlaps a scan dir, events under it are dropped as noise so a
+  // VaultStatusWriter write never triggers a rescan of that scan dir — see
+  // isNoiseEvent's vaultRoot doc for the self-trigger loop this closes.
+  // Same default-resolution convention as VaultStatusWriter's callers: an
+  // unset/empty DB value falls back to `$HOME/N3URAL-Vault`.
+  final rawVaultDir = await db.getVaultDir();
+  final vaultRoot =
+      rawVaultDir ??
+      p.join(Platform.environment['HOME'] ?? '/tmp', 'N3URAL-Vault');
+
+  final service = WatcherService.multi(allDirs, vaultRoot: vaultRoot);
   ref.onDispose(service.dispose);
 
   // Forward all events from the service's debounced stream

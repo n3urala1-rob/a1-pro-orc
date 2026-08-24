@@ -1,0 +1,6 @@
+#!/bin/bash
+# Fake `claude` CLI fixture that fails immediately — used to prove a
+# failing run's stderr is captured in the output file and its non-zero exit
+# is observable.
+echo "FAKE_CLAUDE_FAILURE: something went wrong" >&2
+exit 1

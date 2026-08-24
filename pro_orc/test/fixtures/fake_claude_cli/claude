@@ -1,0 +1,10 @@
+#!/bin/bash
+# Fake `claude` CLI fixture for HeadlessSkillRunner tests — never the real
+# CLI. Echoes a canned success marker plus every argument it received
+# (verbatim, one per line) so tests can assert an argument containing shell
+# metacharacters arrived as a literal argv entry, not shell-evaluated.
+echo "FAKE_CLAUDE_SUCCESS"
+for arg in "$@"; do
+  echo "ARG: $arg"
+done
+exit 0

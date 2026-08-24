@@ -29,6 +29,7 @@
 		33CC11132044BFA00003C045 /* MainFlutterWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33CC11122044BFA00003C045 /* MainFlutterWindow.swift */; };
 		6CF4C26043F51E31730E8822 /* Pods_Runner.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6DBD2B0D6117653C06DE3452 /* Pods_Runner.framework */; };
 		DF8C3A69312518630A7C62F8 /* Pods_RunnerTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 803DA995835C7ADF67A61517 /* Pods_RunnerTests.framework */; };
+		DE7B0381396A22B08C5936A0 /* skill_watchdog.sh in Resources */ = {isa = PBXBuildFile; fileRef = A35DAFDEE6891259A33EE0A6 /* skill_watchdog.sh */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -71,6 +72,7 @@
 		33CC10F22044A3C60003C045 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Assets.xcassets; path = Runner/Assets.xcassets; sourceTree = "<group>"; };
 		33CC10F52044A3C60003C045 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/MainMenu.xib; sourceTree = "<group>"; };
 		33CC10F72044A3C60003C045 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = Info.plist; path = Runner/Info.plist; sourceTree = "<group>"; };
+		A35DAFDEE6891259A33EE0A6 /* skill_watchdog.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; name = skill_watchdog.sh; path = ../scripts/skill_watchdog.sh; sourceTree = "<group>"; };
 		33CC11122044BFA00003C045 /* MainFlutterWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainFlutterWindow.swift; sourceTree = "<group>"; };
 		33CEB47222A05771004F2AC0 /* Flutter-Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = "Flutter-Debug.xcconfig"; sourceTree = "<group>"; };
 		33CEB47422A05771004F2AC0 /* Flutter-Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = "Flutter-Release.xcconfig"; sourceTree = "<group>"; };
@@ -156,6 +158,7 @@
 				33CC10F22044A3C60003C045 /* Assets.xcassets */,
 				33CC10F42044A3C60003C045 /* MainMenu.xib */,
 				33CC10F72044A3C60003C045 /* Info.plist */,
+				A35DAFDEE6891259A33EE0A6 /* skill_watchdog.sh */,
 			);
 			name = Resources;
 			path = ..;
@@ -317,6 +320,7 @@
 			files = (
 				33CC10F32044A3C60003C045 /* Assets.xcassets in Resources */,
 				33CC10F62044A3C60003C045 /* MainMenu.xib in Resources */,
+				DE7B0381396A22B08C5936A0 /* skill_watchdog.sh in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

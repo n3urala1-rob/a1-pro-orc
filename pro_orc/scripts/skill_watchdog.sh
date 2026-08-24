@@ -14,6 +14,13 @@
 # detached shell) learns the real `claude -p` PID deterministically,
 # without racing a poll loop against a short (test-injected) timeout.
 #
+# <output_file>.exit is written with the child's numeric exit code once it
+# terminates — 137 (128+SIGKILL) when the timeout fires — so the Dart
+# caller can classify the run's terminal status (success/failure/timeout)
+# from the actual exit code instead of guessing from output-file
+# emptiness. The value written is always this script's own $? (numeric,
+# never shell-evaluated), matching the no-interpolation contract below.
+#
 # No user-controlled value is interpolated into this script's TEXT (the
 # script itself is a fixed, code-owned file, never rewritten per-run) — all
 # values arrive as discrete argv entries, never shell-evaluated.
@@ -49,5 +56,12 @@ CHILD_EXIT=$?
 # and hit an unrelated process that later reuses this process group's PID.
 kill "$WATCHDOG_TIMER_PID" 2>/dev/null
 wait "$WATCHDOG_TIMER_PID" 2>/dev/null
+
+# Written last, after the child has fully exited (and any timeout-kill race
+# is already resolved above) — the Dart caller polls for the child PID to
+# disappear from `ps`, then reads this file, so it always sees the final
+# value, never a stale one from a previous run at the same path (each run
+# uses a fresh timestamped output file).
+echo "$CHILD_EXIT" > "$OUTFILE.exit"
 
 exit "$CHILD_EXIT"

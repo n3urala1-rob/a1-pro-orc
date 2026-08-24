@@ -37,6 +37,8 @@ class _FakeSkillRunNotifier extends SkillRunNotifier {
   @override
   SkillRunState build() => _seed;
 
+  StartSkillOutcome outcomeToReturn = StartSkillOutcome.started;
+
   @override
   Future<StartSkillResult> start(
     ProjectModel project,
@@ -44,7 +46,7 @@ class _FakeSkillRunNotifier extends SkillRunNotifier {
     String skillPrompt,
   ) async {
     startCalls++;
-    return const StartSkillResult(StartSkillOutcome.started);
+    return StartSkillResult(outcomeToReturn);
   }
 
   @override
@@ -242,6 +244,188 @@ void main() {
         expect(fakeNotifier.cancelCalls, equals(1));
         expect(fakeNotifier.lastCancelledFolderId, equals('pro-orc'));
         expect(fakeNotifier.lastCancelledSkillId, equals(skill.id));
+      },
+    );
+
+    testWidgets(
+      'a rejected start (concurrency limit) surfaces a SnackBar instead of '
+      'silently doing nothing',
+      (tester) async {
+        final db = AppDatabase(NativeDatabase.memory());
+        addTearDown(db.close);
+        final fakeNotifier = _FakeSkillRunNotifier(const SkillRunState())
+          ..outcomeToReturn = StartSkillOutcome.rejectedConcurrencyLimit;
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              appDatabaseProvider.overrideWithValue(db),
+              membershipProvider.overrideWith(
+                () => _FakeMembershipNotifier({'pro-orc': null}),
+              ),
+              skillRunProvider.overrideWith(() => fakeNotifier),
+            ],
+            child: MaterialApp(
+              theme: ThemeData.dark().copyWith(
+                extensions: const [AppColors.dark],
+              ),
+              home: Builder(
+                builder: (context) {
+                  final colors = Theme.of(context).extension<AppColors>()!;
+                  return Scaffold(
+                    body: ClaudeSkillsSection(
+                      project: _project('pro-orc'),
+                      colors: colors,
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text(kCuratedSkills.first.displayName));
+        await tester.pumpAndSettle();
+
+        expect(fakeNotifier.startCalls, equals(1));
+        expect(find.byType(SnackBar), findsOneWidget);
+        // No unhandled async error escaped the tap — pumpAndSettle above
+        // would have surfaced one via FlutterError.onError/exceptions.
+      },
+    );
+
+    testWidgets(
+      'claude CLI not available surfaces a distinct SnackBar message',
+      (tester) async {
+        final db = AppDatabase(NativeDatabase.memory());
+        addTearDown(db.close);
+        final fakeNotifier = _FakeSkillRunNotifier(const SkillRunState())
+          ..outcomeToReturn = StartSkillOutcome.claudeNotAvailable;
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              appDatabaseProvider.overrideWithValue(db),
+              membershipProvider.overrideWith(
+                () => _FakeMembershipNotifier({'pro-orc': null}),
+              ),
+              skillRunProvider.overrideWith(() => fakeNotifier),
+            ],
+            child: MaterialApp(
+              theme: ThemeData.dark().copyWith(
+                extensions: const [AppColors.dark],
+              ),
+              home: Builder(
+                builder: (context) {
+                  final colors = Theme.of(context).extension<AppColors>()!;
+                  return Scaffold(
+                    body: ClaudeSkillsSection(
+                      project: _project('pro-orc'),
+                      colors: colors,
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text(kCuratedSkills.first.displayName));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(SnackBar), findsOneWidget);
+        expect(find.textContaining('Claude CLI'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'a spawn failure surfaces a distinct SnackBar message',
+      (tester) async {
+        final db = AppDatabase(NativeDatabase.memory());
+        addTearDown(db.close);
+        final fakeNotifier = _FakeSkillRunNotifier(const SkillRunState())
+          ..outcomeToReturn = StartSkillOutcome.spawnFailed;
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              appDatabaseProvider.overrideWithValue(db),
+              membershipProvider.overrideWith(
+                () => _FakeMembershipNotifier({'pro-orc': null}),
+              ),
+              skillRunProvider.overrideWith(() => fakeNotifier),
+            ],
+            child: MaterialApp(
+              theme: ThemeData.dark().copyWith(
+                extensions: const [AppColors.dark],
+              ),
+              home: Builder(
+                builder: (context) {
+                  final colors = Theme.of(context).extension<AppColors>()!;
+                  return Scaffold(
+                    body: ClaudeSkillsSection(
+                      project: _project('pro-orc'),
+                      colors: colors,
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text(kCuratedSkills.first.displayName));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(SnackBar), findsOneWidget);
+        expect(find.textContaining('fehlgeschlagen'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'a successful start shows no SnackBar (self-evident via the button '
+      'switching to its running state)',
+      (tester) async {
+        final db = AppDatabase(NativeDatabase.memory());
+        addTearDown(db.close);
+        final fakeNotifier = _FakeSkillRunNotifier(const SkillRunState());
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              appDatabaseProvider.overrideWithValue(db),
+              membershipProvider.overrideWith(
+                () => _FakeMembershipNotifier({'pro-orc': null}),
+              ),
+              skillRunProvider.overrideWith(() => fakeNotifier),
+            ],
+            child: MaterialApp(
+              theme: ThemeData.dark().copyWith(
+                extensions: const [AppColors.dark],
+              ),
+              home: Builder(
+                builder: (context) {
+                  final colors = Theme.of(context).extension<AppColors>()!;
+                  return Scaffold(
+                    body: ClaudeSkillsSection(
+                      project: _project('pro-orc'),
+                      colors: colors,
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text(kCuratedSkills.first.displayName));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(SnackBar), findsNothing);
       },
     );
 

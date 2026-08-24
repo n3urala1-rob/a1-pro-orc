@@ -129,6 +129,170 @@ void main() {
       expect(await outsideFile.exists(), isFalse);
     });
 
+    test(
+      'fence breakout: body containing a bare ``` fence is still fully '
+      'contained inside the rendered note\'s own fence (adaptive fence '
+      'length, CommonMark rule)',
+      () async {
+        final body =
+            'Some intro text.\n'
+            '```\n'
+            'nested code block\n'
+            '```\n'
+            'More output after the nested fence.';
+
+        final result = await writer.write(
+          vaultRoot: vaultDir.path,
+          projectHubSlug: 'pro-orc',
+          skillSlug: 'a1-progress',
+          skillDisplayName: 'a1-progress',
+          outcome: 'erfolgreich',
+          bodyContent: body,
+          completedAt: completedAt,
+        );
+
+        final content = await File(result.path!).readAsString();
+        final ausgabeIndex = content.indexOf('## Ausgabe');
+        expect(ausgabeIndex, greaterThanOrEqualTo(0));
+        final afterHeading = content.substring(ausgabeIndex);
+
+        // The opening fence for the body must be longer than the longest
+        // backtick run inside the body (here 3), so the body's own ``` runs
+        // never close it early.
+        final openFenceMatch = RegExp(
+          r'\n(`{3,})\n',
+        ).firstMatch(afterHeading);
+        expect(
+          openFenceMatch,
+          isNotNull,
+          reason: 'expected an opening fence line after ## Ausgabe',
+        );
+        final fenceLen = openFenceMatch!.group(1)!.length;
+        expect(
+          fenceLen,
+          greaterThan(3),
+          reason:
+              'fence must be longer than the longest run inside the body '
+              '(3) to actually contain it',
+        );
+
+        // Exactly two fence delimiters of that exact length should exist
+        // (the wrapper's open + close) — the body's shorter ``` runs must
+        // not be recognized as fence delimiters of the same length.
+        final delimiterPattern = RegExp('^`{$fenceLen}\$', multiLine: true);
+        final delimiterCount = delimiterPattern
+            .allMatches(afterHeading)
+            .length;
+        expect(delimiterCount, equals(2));
+
+        // The nested content must appear verbatim, unrendered, between the
+        // wrapper's open and close fence.
+        expect(content, contains('nested code block'));
+        expect(content, contains('More output after the nested fence.'));
+      },
+    );
+
+    test(
+      'fence breakout: a longer nested fence (````js) still gets fully '
+      'contained — adaptive fence length scans the whole body',
+      () async {
+        final body =
+            'Text before.\n'
+            '````js\n'
+            'const x = 1;\n'
+            '```\n'
+            'still inside\n'
+            '```\n'
+            '````\n'
+            'Text after.';
+
+        final result = await writer.write(
+          vaultRoot: vaultDir.path,
+          projectHubSlug: 'pro-orc',
+          skillSlug: 'a1-checklist',
+          skillDisplayName: 'a1-checklist',
+          outcome: 'erfolgreich',
+          bodyContent: body,
+          completedAt: completedAt,
+        );
+
+        final content = await File(result.path!).readAsString();
+        final ausgabeIndex = content.indexOf('## Ausgabe');
+        final afterHeading = content.substring(ausgabeIndex);
+
+        final openFenceMatch = RegExp(
+          r'\n(`{3,})\n',
+        ).firstMatch(afterHeading);
+        expect(openFenceMatch, isNotNull);
+        final fenceLen = openFenceMatch!.group(1)!.length;
+        // Longest run inside the body is 4 (````js) -> wrapper must use >= 5.
+        expect(fenceLen, greaterThan(4));
+
+        final delimiterPattern = RegExp('^`{$fenceLen}\$', multiLine: true);
+        expect(delimiterPattern.allMatches(afterHeading).length, equals(2));
+      },
+    );
+
+    test(
+      'fence breakout: body containing frontmatter-like lines and a '
+      'wikilink after a fence never renders as live Markdown outside the '
+      'wrapper fence (vault graph pollution guard)',
+      () async {
+        final body =
+            '```\n'
+            '---\n'
+            'type: project\n'
+            '---\n'
+            'part_of [[project/some-other-project]]\n'
+            '```\n'
+            'trailing output';
+
+        final result = await writer.write(
+          vaultRoot: vaultDir.path,
+          projectHubSlug: 'pro-orc',
+          skillSlug: 'a1-progress',
+          skillDisplayName: 'a1-progress',
+          outcome: 'erfolgreich',
+          bodyContent: body,
+          completedAt: completedAt,
+        );
+
+        final content = await File(result.path!).readAsString();
+        final ausgabeIndex = content.indexOf('## Ausgabe');
+        final afterHeading = content.substring(ausgabeIndex);
+
+        final openFenceMatch = RegExp(
+          r'\n(`{3,})\n',
+        ).firstMatch(afterHeading);
+        expect(openFenceMatch, isNotNull);
+        final fenceLen = openFenceMatch!.group(1)!.length;
+        final openFenceEnd = openFenceMatch.end;
+        final closeFenceMatch = RegExp(
+          '\\n`{$fenceLen}\\n',
+        ).firstMatch(afterHeading.substring(openFenceEnd));
+        expect(
+          closeFenceMatch,
+          isNotNull,
+          reason: 'expected a matching close fence of the same length',
+        );
+
+        // The only 'part_of' wikilink-style line in the whole note must be
+        // the legitimate Relations one written by the template — the one
+        // embedded in the body must stay literal text inside the fence,
+        // not become a second live Relations-style line outside it.
+        final relationsPartOf = 'part_of [[project/pro-orc]]';
+        expect(content, contains(relationsPartOf));
+        final occurrences = 'part_of [['.allMatches(content).length;
+        expect(
+          occurrences,
+          equals(2),
+          reason:
+              'exactly the template Relations line + the literal body '
+              'occurrence — neither multiplied nor escaped out of the fence',
+        );
+      },
+    );
+
     test('no shell usage (structural): the module has zero Process spawn '
         'references — plain file I/O (File/Directory) only', () {
       final source = File(

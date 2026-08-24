@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -178,7 +180,7 @@ class _SkillButton extends ConsumerWidget {
         child: GestureDetector(
           onTap: blocked
               ? null
-              : () => _handleTap(ref, thisRunning: thisRunning),
+              : () => _handleTap(context, ref, thisRunning: thisRunning),
           child: Container(
             constraints: const BoxConstraints(minWidth: 88, minHeight: 52),
             padding: const EdgeInsets.symmetric(horizontal: 10),
@@ -220,12 +222,46 @@ class _SkillButton extends ConsumerWidget {
     );
   }
 
-  void _handleTap(WidgetRef ref, {required bool thisRunning}) {
+  void _handleTap(
+    BuildContext context,
+    WidgetRef ref, {
+    required bool thisRunning,
+  }) {
     // FR-003: a repeated tap on an already-running skill is a no-op at the
     // UI layer — the concurrency limiter is the authoritative guard, this
     // is just the accidental-double-click affordance.
     if (thisRunning) return;
-    ref.read(skillRunProvider.notifier).start(project, skill.id, skill.prompt);
+
+    // Await + surface non-started outcomes (mirrors quick_actions.dart's
+    // `_syncNowWithFeedback` M-5 precedent) — the Future and its
+    // StartSkillOutcome were previously discarded entirely, so a rejected
+    // or failed start looked identical to a successful one: nothing
+    // happened and the user got no explanation.
+    unawaited(
+      ref
+          .read(skillRunProvider.notifier)
+          .start(project, skill.id, skill.prompt)
+          .then((result) {
+            if (!context.mounted) return;
+            final messenger = ScaffoldMessenger.maybeOf(context);
+            if (messenger == null) return;
+
+            final message = switch (result.outcome) {
+              StartSkillOutcome.started => null,
+              StartSkillOutcome.rejectedConcurrencyLimit =>
+                'Bereits 2 Läufe aktiv — bitte warten, bis ein Lauf fertig ist.',
+              StartSkillOutcome.claudeNotAvailable =>
+                'Claude CLI nicht gefunden — bitte installieren und auf dem '
+                    'PATH verfügbar machen.',
+              StartSkillOutcome.spawnFailed =>
+                'Start fehlgeschlagen — der Skill konnte nicht gestartet '
+                    'werden.',
+            };
+            if (message == null) return;
+
+            messenger.showSnackBar(SnackBar(content: Text(message)));
+          }),
+    );
   }
 }
 

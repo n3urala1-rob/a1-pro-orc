@@ -19,7 +19,20 @@ import 'package:pro_orc/providers/database_provider.dart';
 String skillRunKey(String folderId, String skillId) => '$folderId:$skillId';
 
 /// Outcome of [SkillRunNotifier.start].
-enum StartSkillOutcome { started, rejectedConcurrencyLimit, claudeNotAvailable }
+enum StartSkillOutcome {
+  started,
+  rejectedConcurrencyLimit,
+  claudeNotAvailable,
+
+  /// The spawn path itself failed after the concurrency slot was claimed —
+  /// e.g. a [ProcessException] (missing/unbundled watchdog script) or a
+  /// [StateError] (watchdog never wrote its PID file within the poll
+  /// window). Distinct from [claudeNotAvailable] (detected cleanly before
+  /// any process was spawned) so the UI can show a different message; in
+  /// both cases the concurrency slot claimed at the top of [start] is
+  /// always released before this outcome is returned.
+  spawnFailed,
+}
 
 class StartSkillResult {
   const StartSkillResult(this.outcome);
@@ -87,6 +100,11 @@ final skillNotificationServiceProvider = Provider<SkillNotificationService>(
 /// `ref.watch`s another provider from inside a method that runs per-call,
 /// only reads the services it needs at the point of use.
 class SkillRunNotifier extends Notifier<SkillRunState> {
+  /// Same tolerance [SkillRunReconciler] uses for its own start-time
+  /// comparison (see that class's doc comment for the `ps -o lstart=`
+  /// truncation rationale) — reused here for [cancel]'s identity check.
+  static const _cancelStartTimeTolerance = Duration(seconds: 1);
+
   @override
   SkillRunState build() {
     unawaited(_reconcileOnStartup());
@@ -188,6 +206,19 @@ class SkillRunNotifier extends Notifier<SkillRunState> {
     } on ClaudeNotAvailableException {
       limiter.markFinished(project.folderId);
       return const StartSkillResult(StartSkillOutcome.claudeNotAvailable);
+    } catch (e) {
+      // Any other failure on the spawn path (ProcessException from a
+      // missing/unbundled watchdog script, StateError from a PID-file
+      // write timeout, or anything else) must still release the slot
+      // claimed above — an uncaught throw here previously leaked it
+      // permanently, exhausting the system-wide limit of 2 after just two
+      // such failures until app restart.
+      developer.log(
+        'Skill spawn failed for ${project.folderId}/$skillId: $e',
+        name: 'skill_run_provider',
+      );
+      limiter.markFinished(project.folderId);
+      return const StartSkillResult(StartSkillOutcome.spawnFailed);
     }
 
     final runId =
@@ -256,10 +287,7 @@ class SkillRunNotifier extends Notifier<SkillRunState> {
     if (!ref.mounted) return;
 
     final db = ref.read(appDatabaseProvider);
-    final exitedCleanly = await _readWatchdogSuccess(outputFilePath);
-    final status = exitedCleanly
-        ? SkillRunStatus.success
-        : SkillRunStatus.failure;
+    final status = await _readTerminalStatus(outputFilePath);
     final completedAt = DateTime.now();
 
     await db.updateSkillRunStatus(
@@ -301,23 +329,36 @@ class SkillRunNotifier extends Notifier<SkillRunState> {
     ref.read(skillRunConcurrencyLimiterProvider).markFinished(project.folderId);
   }
 
-  /// Best-effort read of whether the watchdog-wrapped process exited
-  /// cleanly — this simple heuristic (does the output file exist and is it
-  /// non-empty) is a placeholder for exit-code plumbing a later iteration
-  /// could add to the watchdog script; sufficient for this wave's terminal-
-  /// state classification (success vs. failure) without over-scoping.
-  Future<bool> _readWatchdogSuccess(String outputFilePath) async {
+  /// Reads the child's real exit code from `<outputFilePath>.exit`,
+  /// written by `scripts/skill_watchdog.sh` as its very last step (after
+  /// the child has fully exited — see the script's own comment). Maps it
+  /// to a terminal [SkillRunStatus]: `0` -> success, `137` (128+SIGKILL,
+  /// the watchdog's own timeout-kill signal) -> timeout, any other exit
+  /// code -> failure. A missing or unparsable status file (e.g. the
+  /// watchdog itself crashed before reaching that line, or output-file
+  /// classification predates this fix) is treated as failure — never
+  /// silently upgraded to success.
+  ///
+  /// Replaces the earlier "output file non-empty = success" heuristic,
+  /// which misclassified failed runs that still produced output as
+  /// success, silent successes with empty output as failure, and never
+  /// produced [SkillRunStatus.timeout] at all.
+  Future<SkillRunStatus> _readTerminalStatus(String outputFilePath) async {
     try {
-      final file = File(outputFilePath);
-      if (!await file.exists()) return false;
-      final content = await file.readAsString();
-      return content.isNotEmpty;
+      final exitFile = File('$outputFilePath.exit');
+      if (!await exitFile.exists()) return SkillRunStatus.failure;
+      final raw = (await exitFile.readAsString()).trim();
+      final exitCode = int.tryParse(raw);
+      if (exitCode == null) return SkillRunStatus.failure;
+      if (exitCode == 0) return SkillRunStatus.success;
+      if (exitCode == 137) return SkillRunStatus.timeout;
+      return SkillRunStatus.failure;
     } catch (e) {
       developer.log(
-        'Failed to read output file $outputFilePath: $e',
+        'Failed to read exit status for $outputFilePath: $e',
         name: 'skill_run_provider',
       );
-      return false;
+      return SkillRunStatus.failure;
     }
   }
 
@@ -325,14 +366,34 @@ class SkillRunNotifier extends Notifier<SkillRunState> {
   /// group — reuses the same process-group-kill approach as Wave 2's
   /// watchdog (negative PID targets the whole group, which also takes down
   /// the watchdog wrapper itself since `claude -p` is the group leader).
+  ///
+  /// Before signalling, re-verifies [row.pid] still belongs to the run this
+  /// row recorded — the same PID-reuse guard [SkillRunReconciler] applies
+  /// on startup (compare the OS-reported start time against
+  /// [row.processStartTime]) — since the run may already have exited on
+  /// its own (naturally or via the watchdog's own timeout kill) and the OS
+  /// could have handed that PID to an unrelated, unlucky process by the
+  /// time the user clicks "Abbrechen". Without this check, cancel() would
+  /// SIGKILL that unrelated process's entire process group.
   Future<void> cancel(String folderId, String skillId) async {
     final key = skillRunKey(folderId, skillId);
     final row = state.lastRunByKey[key];
     if (row == null) return;
 
-    // Negative PID = signal the whole process group (matches
-    // scripts/skill_watchdog.sh's own kill mechanism).
-    await Process.run('kill', ['-KILL', '--', '-${row.pid}']);
+    final currentStartTime = await readProcessStartTime(row.pid);
+    final isSameRun =
+        currentStartTime != null &&
+        currentStartTime.difference(row.processStartTime.toLocal()).abs() <=
+            _cancelStartTimeTolerance;
+
+    if (isSameRun) {
+      // Negative PID = signal the whole process group (matches
+      // scripts/skill_watchdog.sh's own kill mechanism).
+      await Process.run('kill', ['-KILL', '--', '-${row.pid}']);
+    }
+    // else: the PID no longer belongs to this run (already exited, or the
+    // OS reused it) — just finalize the row below, no signal sent to
+    // whatever now holds that PID.
 
     final db = ref.read(appDatabaseProvider);
     final completedAt = DateTime.now();

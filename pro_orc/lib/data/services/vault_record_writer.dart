@@ -30,8 +30,11 @@ class VaultRecordWriter {
   /// value beyond writing it verbatim into the rendered body).
   /// [bodyContent] (the run's raw captured output) is written inside a
   /// fenced code block so it can never be misinterpreted as Markdown/YAML
-  /// structure — no further sanitization is required for it, unlike
-  /// `VaultStatusWriter`'s frontmatter/marker-block fields.
+  /// structure. The fence length is computed adaptively per CommonMark
+  /// (longest backtick run inside the body + 1, minimum 3) so output that
+  /// itself contains fenced blocks — the norm for `a1-progress`, whose
+  /// templates are fenced — can never break out of the wrapper fence and
+  /// render as live Markdown/wikilinks in Obsidian.
   Future<VaultRecordWriteResult> write({
     required String vaultRoot,
     required String projectHubSlug,
@@ -137,6 +140,7 @@ class VaultRecordWriter {
     required String dateStr,
   }) {
     final timeStr = _formatTime(completedAt);
+    final fence = _fenceFor(bodyContent);
     final buffer = StringBuffer()
       ..writeln('---')
       ..writeln('type: record')
@@ -156,10 +160,27 @@ class VaultRecordWriter {
       ..writeln()
       ..writeln('## Ausgabe')
       ..writeln()
-      ..writeln('```')
+      ..writeln(fence)
       ..writeln(bodyContent)
-      ..writeln('```');
+      ..writeln(fence);
     return buffer.toString();
+  }
+
+  /// Computes a CommonMark-safe fence delimiter for [body]: three backticks
+  /// unless [body] itself contains a run of three or more consecutive
+  /// backticks, in which case the fence is one backtick longer than the
+  /// longest such run — the standard rule for guaranteeing a fenced code
+  /// block actually contains everything inside it, since CommonMark only
+  /// closes a fence on a delimiter line of matching or greater length.
+  String _fenceFor(String body) {
+    final matches = RegExp(r'`{3,}').allMatches(body);
+    var longest = 0;
+    for (final match in matches) {
+      final len = match.end - match.start;
+      if (len > longest) longest = len;
+    }
+    final fenceLength = longest >= 3 ? longest + 1 : 3;
+    return '`' * fenceLength;
   }
 
   bool _isContained(String targetPath, String root) {

@@ -234,6 +234,111 @@ void main() {
       expect(second.started, isTrue);
     });
 
+    test(
+      'a ProcessException from the spawn path (e.g. missing watchdog '
+      'script) releases the concurrency slot and surfaces a failed outcome '
+      '— it must not silently leak the slot like ClaudeNotAvailableException '
+      'already correctly handles',
+      () async {
+        fakeRunner.throwOnStart = const ProcessException(
+          '/path/to/skill_watchdog.sh',
+          [],
+          'No such file or directory',
+        );
+
+        final result = await notifier().start(
+          project('proj-a'),
+          'a1-progress',
+          'status check',
+        );
+
+        expect(result.started, isFalse);
+        final limiter = container.read(skillRunConcurrencyLimiterProvider);
+        expect(limiter.runningCount, equals(0));
+        expect(limiter.canStart('proj-a'), isTrue);
+
+        // The slot being free means a subsequent start for the same
+        // project is not blocked by the failed attempt.
+        fakeRunner.throwOnStart = null;
+        final outputFile = p.join(tempOutputDir.path, 'out-after-pe.log');
+        fakeRunner.nextResult = () => SpawnResult(
+          pid: 999999,
+          processStartTime: DateTime.now(),
+          outputFilePath: outputFile,
+        );
+        final second = await notifier().start(
+          project('proj-a'),
+          'a1-progress',
+          'status check',
+        );
+        expect(second.started, isTrue);
+      },
+    );
+
+    test(
+      'a StateError from the spawn path (e.g. PID-file write timeout) '
+      'releases the concurrency slot and surfaces a failed outcome',
+      () async {
+        fakeRunner.throwOnStart = StateError(
+          'Watchdog did not write a PID file within the poll window',
+        );
+
+        final result = await notifier().start(
+          project('proj-a'),
+          'a1-progress',
+          'status check',
+        );
+
+        expect(result.started, isFalse);
+        final limiter = container.read(skillRunConcurrencyLimiterProvider);
+        expect(limiter.runningCount, equals(0));
+        expect(limiter.canStart('proj-a'), isTrue);
+      },
+    );
+
+    test(
+      'two failed spawns in a row (any non-started outcome) never exhaust '
+      'the system-wide limit of 2 for good — this is the exact global '
+      'lockup the review flagged',
+      () async {
+        fakeRunner.throwOnStart = const ProcessException('watchdog', []);
+
+        final first = await notifier().start(
+          project('proj-a'),
+          'a1-progress',
+          'x',
+        );
+        final second = await notifier().start(
+          project('proj-b'),
+          'a1-progress',
+          'x',
+        );
+
+        expect(first.started, isFalse);
+        expect(second.started, isFalse);
+
+        fakeRunner.throwOnStart = null;
+        final outputFile = p.join(tempOutputDir.path, 'out-recovery.log');
+        fakeRunner.nextResult = () => SpawnResult(
+          pid: 999999,
+          processStartTime: DateTime.now(),
+          outputFilePath: outputFile,
+        );
+        final third = await notifier().start(
+          project('proj-c'),
+          'a1-progress',
+          'x',
+        );
+        expect(
+          third.started,
+          isTrue,
+          reason:
+              'the limit must not stay exhausted after two failed (never '
+              'successfully started) attempts',
+        );
+      },
+    );
+
     test('vault write happens only after completion, not at start', () async {
       final outputFile = p.join(tempOutputDir.path, 'out.log');
       fakeRunner.nextResult = () => alreadyExitedFakeResult(outputFile);
@@ -246,6 +351,96 @@ void main() {
 
       await waitUntil(() => fakeVaultWriter.calls.isNotEmpty);
       expect(fakeVaultWriter.calls, hasLength(1));
+    });
+
+    group('terminal status classification (exit-code file)', () {
+      test(
+        'a failed run that still produced output classifies as failure, '
+        'not success — the old "output non-empty" heuristic got this '
+        'backwards',
+        () async {
+          final outputFile = p.join(tempOutputDir.path, 'failed-with-output.log');
+          await File(outputFile).writeAsString('some partial output here');
+          await File('$outputFile.exit').writeAsString('1');
+          fakeRunner.nextResult = () => alreadyExitedFakeResult(outputFile);
+
+          await notifier().start(project('proj-a'), 'a1-progress', 'x');
+          await waitUntil(() {
+            final row = container
+                .read(skillRunProvider)
+                .lastRunByKey[skillRunKey('proj-a', 'a1-progress')];
+            return row != null && row.status != 'running';
+          });
+
+          final row = await db.getSkillRun('proj-a', 'a1-progress');
+          expect(row!.status, equals('failure'));
+        },
+      );
+
+      test(
+        'a silent success (empty output, exit code 0) classifies as '
+        'success, not failure — the old heuristic got this backwards too',
+        () async {
+          final outputFile = p.join(tempOutputDir.path, 'silent-success.log');
+          await File(outputFile).writeAsString('');
+          await File('$outputFile.exit').writeAsString('0');
+          fakeRunner.nextResult = () => alreadyExitedFakeResult(outputFile);
+
+          await notifier().start(project('proj-a'), 'a1-progress', 'x');
+          await waitUntil(() {
+            final row = container
+                .read(skillRunProvider)
+                .lastRunByKey[skillRunKey('proj-a', 'a1-progress')];
+            return row != null && row.status != 'running';
+          });
+
+          final row = await db.getSkillRun('proj-a', 'a1-progress');
+          expect(row!.status, equals('success'));
+        },
+      );
+
+      test(
+        'a watchdog-killed timeout (exit code 137) classifies as timeout '
+        '— SkillRunStatus.timeout was previously never produced at all',
+        () async {
+          final outputFile = p.join(tempOutputDir.path, 'timed-out.log');
+          await File(outputFile).writeAsString('partial output before kill');
+          await File('$outputFile.exit').writeAsString('137');
+          fakeRunner.nextResult = () => alreadyExitedFakeResult(outputFile);
+
+          await notifier().start(project('proj-a'), 'a1-progress', 'x');
+          await waitUntil(() {
+            final row = container
+                .read(skillRunProvider)
+                .lastRunByKey[skillRunKey('proj-a', 'a1-progress')];
+            return row != null && row.status != 'running';
+          });
+
+          final row = await db.getSkillRun('proj-a', 'a1-progress');
+          expect(row!.status, equals('timeout'));
+        },
+      );
+
+      test(
+        'a missing .exit file (watchdog crashed before writing it) '
+        'classifies as failure rather than being upgraded to success',
+        () async {
+          final outputFile = p.join(tempOutputDir.path, 'no-exit-file.log');
+          await File(outputFile).writeAsString('some output, no .exit file');
+          fakeRunner.nextResult = () => alreadyExitedFakeResult(outputFile);
+
+          await notifier().start(project('proj-a'), 'a1-progress', 'x');
+          await waitUntil(() {
+            final row = container
+                .read(skillRunProvider)
+                .lastRunByKey[skillRunKey('proj-a', 'a1-progress')];
+            return row != null && row.status != 'running';
+          });
+
+          final row = await db.getSkillRun('proj-a', 'a1-progress');
+          expect(row!.status, equals('failure'));
+        },
+      );
     });
   });
 
@@ -278,6 +473,51 @@ void main() {
           isNot(contains(key)),
         );
         expect(fakeNotificationPlugin.titles, hasLength(1));
+      },
+    );
+
+    test(
+      'PID reuse guard: cancel() never signals a PID that no longer '
+      'belongs to the recorded run — mirrors SkillRunReconciler\'s own '
+      'no-signal-proof test pattern',
+      () async {
+        // This very test process's own PID: real, definitely alive, but
+        // NOT started by this test's fabricated run — its real start time
+        // will not match the fabricated (wrong) processStartTime recorded
+        // below, exactly modeling a PID the OS already reused after the
+        // original skill run exited.
+        final unrelatedPid = pid;
+        final realStartTime = await readProcessStartTime(unrelatedPid);
+        expect(realStartTime, isNotNull);
+        final wrongStartTime = realStartTime!.subtract(
+          const Duration(days: 1),
+        );
+
+        final outputFile = p.join(tempOutputDir.path, 'reused-pid.log');
+        fakeRunner.nextResult = () => SpawnResult(
+          pid: unrelatedPid,
+          processStartTime: wrongStartTime,
+          outputFilePath: outputFile,
+        );
+
+        await notifier().start(project('proj-a'), 'a1-progress', 'x');
+        await notifier().cancel('proj-a', 'a1-progress');
+
+        // If cancel() had (incorrectly) signalled `-unrelatedPid`, this
+        // very test process's whole process group — including this test
+        // runner itself — would already be dead and this assertion would
+        // never execute. That non-death is the proof.
+        final stillAlive = await Process.run('ps', [
+          '-p',
+          unrelatedPid.toString(),
+        ]);
+        expect(stillAlive.exitCode, equals(0));
+
+        // The row is still finalized as cancelled even though no signal
+        // was sent — cancel() must not silently no-op the whole operation,
+        // only the (now unsafe) kill step.
+        final row = await db.getSkillRun('proj-a', 'a1-progress');
+        expect(row!.status, equals('cancelled'));
       },
     );
   });

@@ -23,8 +23,7 @@ import 'package:pro_orc/data/services/process_runner.dart';
 /// `pgrep -f`.
 Future<bool> _anyProcessMatches(String pattern) async {
   final result = await Process.run('pgrep', ['-f', pattern]);
-  return result.exitCode == 0 &&
-      (result.stdout as String).trim().isNotEmpty;
+  return result.exitCode == 0 && (result.stdout as String).trim().isNotEmpty;
 }
 
 void main() {
@@ -99,23 +98,70 @@ void main() {
     },
   );
 
-  test(
-    'a normal (non-forking) command still completes successfully — the '
-    'tree-kill mechanism does not interfere with the happy path',
-    () async {
-      final semaphore = ProcessSemaphore();
-      final result = await runProcessWithTimeout(
-        'echo',
-        ['hello from process_runner_test'],
-        '.',
-        semaphore: semaphore,
-      );
+  test('a normal (non-forking) command still completes successfully — the '
+      'tree-kill mechanism does not interfere with the happy path', () async {
+    final semaphore = ProcessSemaphore();
+    final result = await runProcessWithTimeout(
+      'echo',
+      ['hello from process_runner_test'],
+      '.',
+      semaphore: semaphore,
+    );
 
-      expect(result.exitCode, equals(0));
-      expect(
-        (result.stdout as String).trim(),
-        equals('hello from process_runner_test'),
-      );
-    },
-  );
+    expect(result.exitCode, equals(0));
+    expect(
+      (result.stdout as String).trim(),
+      equals('hello from process_runner_test'),
+    );
+  });
+
+  group('ProcessSemaphore.peakRunning (process-storm round 3, WP3)', () {
+    test(
+      'reports the true high-water mark of concurrent processes, not just '
+      'the current value — stays elevated after concurrency drops back down',
+      () async {
+        final semaphore = ProcessSemaphore(maxConcurrent: 3);
+        expect(semaphore.peakRunning, equals(0));
+
+        // Run 3 concurrent short commands to saturate the limit, then a
+        // single command afterwards — peakRunning must remember the 3-way
+        // saturation even though `.running` has long since dropped back to
+        // 0 or 1 by the time we check.
+        await Future.wait([
+          runProcessWithTimeout('echo', ['a'], '.', semaphore: semaphore),
+          runProcessWithTimeout('echo', ['b'], '.', semaphore: semaphore),
+          runProcessWithTimeout('echo', ['c'], '.', semaphore: semaphore),
+        ]);
+
+        expect(semaphore.peakRunning, equals(3));
+        expect(
+          semaphore.running,
+          equals(0),
+          reason: 'Precondition: all three processes have completed.',
+        );
+
+        await runProcessWithTimeout('echo', ['d'], '.', semaphore: semaphore);
+
+        expect(
+          semaphore.peakRunning,
+          equals(3),
+          reason:
+              'A single subsequent process must not lower the recorded peak '
+              '— peakRunning is a running maximum, not a current sample.',
+        );
+      },
+    );
+
+    test('never exceeds maxConcurrent even when more callers are queued than '
+        'the limit allows', () async {
+      final semaphore = ProcessSemaphore(maxConcurrent: 2);
+
+      await Future.wait([
+        for (var i = 0; i < 6; i++)
+          runProcessWithTimeout('echo', ['$i'], '.', semaphore: semaphore),
+      ]);
+
+      expect(semaphore.peakRunning, equals(2));
+    });
+  });
 }

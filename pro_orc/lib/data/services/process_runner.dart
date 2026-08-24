@@ -22,11 +22,22 @@ class ProcessSemaphore {
 
   final int _maxConcurrent;
   int _running = 0;
+  int _peakRunning = 0;
   final Queue<Completer<void>> _waiters = Queue<Completer<void>>();
 
   /// Current number of processes running under this semaphore. Exposed for
   /// tests that assert the observed concurrency never exceeds the limit.
   int get running => _running;
+
+  /// Highest [running] value ever observed since this instance was created
+  /// (process-storm round 3, WP3 — team-lead follow-up). Round 2's
+  /// verification never captured whether the cap the semaphore imposes was
+  /// ever actually approached at runtime; this is the missing signal —
+  /// alongside the watcher's tracked-entity count and construction time
+  /// (see watcher_telemetry.dart), the Settings telemetry section shows
+  /// whether the process ceiling itself was ever the bottleneck during a
+  /// future incident, not just whether it structurally exists.
+  int get peakRunning => _peakRunning;
 
   int get maxConcurrent => _maxConcurrent;
 
@@ -35,6 +46,7 @@ class ProcessSemaphore {
       // Slot free — claim it synchronously so no other concurrent caller
       // can also see a free slot before this one is accounted for.
       _running++;
+      if (_running > _peakRunning) _peakRunning = _running;
     } else {
       // No free slot: queue and wait. The slot is reserved (i.e. `_running`
       // is incremented) by whoever wakes this waiter — see the `finally`

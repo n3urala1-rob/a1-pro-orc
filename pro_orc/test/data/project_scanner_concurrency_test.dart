@@ -79,29 +79,29 @@ void main() {
     test(
       'never exceeds the global process semaphore limit during a full scan',
       () async {
-        // Reset the global semaphore's high-water mark by observing
-        // `.running` at intervals is racy; instead, wrap the real semaphore
-        // to record the max concurrently-running count it ever allowed.
-        var maxObserved = 0;
-        final pollTimer = Stream<void>.periodic(const Duration(milliseconds: 5))
-            .listen((_) {
-              if (globalProcessSemaphore.running > maxObserved) {
-                maxObserved = globalProcessSemaphore.running;
-              }
-            });
+        // ProcessSemaphore.peakRunning (process-storm round 3, WP3) tracks
+        // the true high-water mark internally, at the exact moment `running`
+        // increments — race-free, unlike polling `.running` on a timer,
+        // which can miss a peak that occurs between poll ticks.
+        final peakBefore = globalProcessSemaphore.peakRunning;
 
         await scanner.scanAll(scanDirOverride: tempDir.path);
 
-        await pollTimer.cancel();
+        final peakDuringScan = globalProcessSemaphore.peakRunning;
 
         expect(
-          maxObserved,
+          peakDuringScan,
           lessThanOrEqualTo(globalProcessSemaphore.maxConcurrent),
           reason:
-              'Observed $maxObserved concurrent processes, but the global '
+              'Peak observed concurrency was $peakDuringScan, but the global '
               'semaphore caps at ${globalProcessSemaphore.maxConcurrent}. A '
               'scan over 20 git repos must never spawn more concurrent '
               'processes than the semaphore allows.',
+        );
+        expect(
+          peakDuringScan,
+          greaterThanOrEqualTo(peakBefore),
+          reason: 'peakRunning must never decrease — it is a running maximum.',
         );
       },
       timeout: const Timeout(Duration(seconds: 60)),

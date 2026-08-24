@@ -11,6 +11,21 @@ final RegExp _skillNamePattern = RegExp(r'^/?[A-Za-z0-9:_-]+$');
 bool isValidSkillName(String skillName) =>
     _skillNamePattern.hasMatch(skillName);
 
+/// NOTE on the raw [Process.run] calls in this class (process-storm round 3,
+/// WP2 review): every call here is `osascript`/`open -a Terminal`,
+/// triggered by a single user click and never looped or fired from a
+/// watcher/scan path. Deliberately NOT routed through
+/// `runProcessWithTimeout`/[ProcessSemaphore]:
+/// - These hand off to an already-running, user-facing Terminal.app window
+///   and exit almost immediately themselves — there is no compound `sh -c`
+///   spawning a background child, so there is nothing for [killProcessTree]
+///   to protect against here.
+/// - Frequency is bounded by human click rate, not by scan/event volume —
+///   the semaphore exists to cap concurrent AUTOMATIC spawns (round-2 root
+///   cause: up to 90 concurrent git calls from one scan), which does not
+///   apply to a single deliberate click.
+/// Revisit if any of these calls is ever wired to fire automatically
+/// (e.g. from a batch action or a watcher-driven trigger).
 class QuickActionsService {
   /// Opens Terminal.app and cd's into the project directory.
   /// Uses osascript for reliable directory navigation.

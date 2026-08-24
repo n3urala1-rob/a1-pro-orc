@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'dart:developer' as developer;
-import 'dart:io';
 
 import 'package:pro_orc/data/models/roadmap_data.dart';
+import 'package:pro_orc/data/services/process_runner.dart';
 import 'package:pro_orc/data/services/roadmap/mcp_transport.dart';
 import 'package:pro_orc/data/services/roadmap/roadmap_repository.dart';
 
@@ -42,14 +42,14 @@ class A1BrainRoadmapRepository implements RoadmapRepository {
   /// missing so the caller can classify that as an auth failure.
   static Future<String?> _readTokenFromKeychain() async {
     try {
-      final result = await Process.run('security', [
+      final result = await runProcessWithTimeout('security', [
         'find-generic-password',
         '-a',
         'brain-proxy',
         '-s',
         'brain-proxy-token',
         '-w',
-      ], runInShell: true);
+      ], '.');
       if (result.exitCode != 0) return null;
       final token = (result.stdout as String).trim();
       return token.isEmpty ? null : token;

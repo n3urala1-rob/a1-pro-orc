@@ -1,6 +1,8 @@
 import 'dart:developer' as developer;
 import 'dart:io';
 
+import 'package:pro_orc/data/services/process_runner.dart';
+
 /// Result of a GitHub `delete_repo` OAuth scope pre-flight check.
 ///
 /// Distinguishes "scope present" from three flavors of "cannot delete right
@@ -42,16 +44,26 @@ typedef GhAuthStatusRunner =
       Duration? timeout,
     });
 
-/// Default [GhAuthStatusRunner]: runs the real command via [Process.run]
-/// with `runInShell: true` (macOS GUI apps don't inherit Homebrew PATH). The
-/// [timeout] parameter is accepted for signature compatibility but enforced
-/// by the caller via [Future.timeout], not here.
+/// Default [GhAuthStatusRunner]: runs the real command via
+/// [runProcessWithTimeout] (process-storm round 3, WP2 — routes through the
+/// app-wide [ProcessSemaphore] instead of a raw [Process.run], and reaps
+/// `gh`'s own credential-helper children via [killProcessTree] if it ever
+/// hangs). `runInShell: true` is `runProcessWithTimeout`'s fixed convention
+/// (macOS GUI apps don't inherit Homebrew PATH). The [timeout] parameter is
+/// accepted for signature compatibility but enforced by the caller via
+/// [Future.timeout], not here — passed through so a single hang is bounded
+/// at both layers.
 Future<ProcessResult> _defaultProcessRunner(
   String command,
   List<String> args, {
   Duration? timeout,
 }) {
-  return Process.run(command, args, runInShell: true);
+  return runProcessWithTimeout(
+    command,
+    args,
+    '.',
+    timeout: timeout ?? const Duration(seconds: 5),
+  );
 }
 
 /// Detects whether the GitHub CLI is installed, the user is logged in, and
@@ -91,15 +103,15 @@ class GhDetectionService {
   /// not logged in, or any error occurs.
   Future<bool> isAvailable() async {
     try {
-      final whichResult = await Process.run(_whichCommand, [
+      final whichResult = await runProcessWithTimeout(_whichCommand, [
         _ghCommand,
-      ], runInShell: true);
+      ], '.', timeout: _authStatusTimeout);
       if (whichResult.exitCode != 0) return false;
 
-      final authResult = await Process.run(_ghCommand, [
+      final authResult = await runProcessWithTimeout(_ghCommand, [
         'auth',
         'status',
-      ], runInShell: true);
+      ], '.', timeout: _authStatusTimeout);
       return authResult.exitCode == 0;
     } catch (e) {
       developer.log(

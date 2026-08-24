@@ -6,6 +6,7 @@ import 'package:path/path.dart' as p;
 
 import 'package:pro_orc/data/models/automation_data.dart';
 import 'package:pro_orc/data/models/harness_data.dart';
+import 'package:pro_orc/data/services/process_runner.dart';
 import 'package:pro_orc/data/services/secret_masking.dart';
 
 // ---------------------------------------------------------------------------
@@ -209,11 +210,20 @@ class AutomationReader {
 
   /// Default crontab reader: `crontab -l` with runInShell (macOS GUI apps do
   /// not inherit a login PATH). Returns null when there is no crontab.
+  ///
+  /// Routed through [runProcessWithTimeout] (process-storm round 3, WP2) —
+  /// this was previously the only ungated spawn reachable from an AUTOMATIC
+  /// path (via `automation_provider.dart`'s watcher invalidation), bypassing
+  /// the app-wide [ProcessSemaphore] the round-2 fix otherwise made
+  /// structural for every other call site.
   static Future<String?> _defaultReadCrontab() async {
     try {
-      final result = await Process.run('crontab', [
-        '-l',
-      ], runInShell: true).timeout(const Duration(seconds: 5));
+      final result = await runProcessWithTimeout(
+        'crontab',
+        ['-l'],
+        '.',
+        timeout: const Duration(seconds: 5),
+      );
       if (result.exitCode != 0) return null; // "no crontab for user"
       final stdout = result.stdout;
       return stdout is String ? stdout : stdout.toString();

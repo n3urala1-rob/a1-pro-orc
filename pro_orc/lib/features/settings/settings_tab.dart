@@ -11,6 +11,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:pro_orc/features/onboarding/onboarding_wizard.dart';
 import 'package:pro_orc/features/settings/vault_link_card.dart';
+import 'package:pro_orc/features/settings/watcher_telemetry_section.dart';
 import 'package:pro_orc/features/shell/glass_card.dart';
 import 'package:pro_orc/providers/database_provider.dart';
 import 'package:pro_orc/providers/learning_provider.dart';
@@ -481,6 +482,16 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
                 ),
                 const VaultLinkCard(),
               ],
+            ),
+          ),
+
+          const SizedBox(height: 20),
+
+          // --- Watcher-Diagnose (process-storm round 3, WP3) ---
+          GlassCard(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: WatcherTelemetrySection(),
             ),
           ),
 

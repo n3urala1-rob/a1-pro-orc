@@ -82,54 +82,67 @@ void main() {
       );
     });
 
-    testWidgets('peak-concurrency row reflects a real semaphore peak after '
-        'concurrent work has run, once refreshed via the "Aktualisieren" '
-        'button', (tester) async {
-      // Drives the real global semaphore's peakRunning tracking directly
-      // via ProcessSemaphore.run — not a provider override, since it's a
-      // process-wide singleton (see process_runner.dart) — WITHOUT
-      // spawning a real OS process. testWidgets bodies run inside
-      // TestWidgetsFlutterBinding's controlled async environment, which
-      // does not reliably interleave with real Process.start I/O; real
-      // subprocess-spawn coverage for runProcessWithTimeout already lives
-      // in process_runner_test.dart (a plain, non-widget test). Here only
-      // the display logic (does the row reflect ProcessSemaphore's
-      // tracked peak) is under test.
-      await Future.wait([
-        globalProcessSemaphore.run(() => Future<void>.value()),
-        globalProcessSemaphore.run(() => Future<void>.value()),
-      ]);
-      expect(
-        globalProcessSemaphore.peakRunning,
-        greaterThan(0),
-        reason:
-            'Precondition: the two concurrent runs above must have '
-            'registered a nonzero peak.',
-      );
+    test(
+      'ProcessSemaphore.peakRunning tracks concurrent work correctly — '
+      'the tracking mechanism itself, isolated from any widget pumping',
+      () async {
+        // Review round 1 (Reinhard, nit 4): the previous version of this
+        // coverage lived inside a testWidgets body and awaited the
+        // process-wide `globalProcessSemaphore` directly — Reinhard
+        // observed a ~20% flake rate ("did not complete" after 30s) on a
+        // cold machine. A LOCAL ProcessSemaphore instance removes any
+        // dependency on TestWidgetsFlutterBinding's controlled async
+        // environment entirely (this is a plain `test`, not `testWidgets`)
+        // and cannot collide with global state other tests in the same
+        // file/run may have touched. The tracking mechanism itself is
+        // already covered in depth by process_runner_test.dart's
+        // `ProcessSemaphore.peakRunning` group — this is a light
+        // reconfirmation local to this file, not a duplicate of that
+        // coverage's assertions.
+        final semaphore = ProcessSemaphore();
 
-      await _pumpSection(tester, telemetry: WatcherTelemetry());
+        await Future.wait([
+          semaphore.run(() => Future<void>.value()),
+          semaphore.run(() => Future<void>.value()),
+        ]);
 
-      // The row already reads the live value on build (no stale caching),
-      // so it should already show the peak — the refresh button exists
-      // for the case where the peak changes WHILE the panel stays open.
-      expect(
-        find.textContaining(
-          '${globalProcessSemaphore.peakRunning} / '
-          '${globalProcessSemaphore.maxConcurrent}',
-        ),
-        findsOneWidget,
-      );
+        expect(semaphore.peakRunning, equals(2));
+        expect(semaphore.maxConcurrent, equals(6));
+      },
+    );
 
-      await tester.tap(find.byIcon(LucideIcons.refreshCw));
-      await tester.pumpAndSettle();
+    testWidgets(
+      'peak-concurrency row displays globalProcessSemaphore.peakRunning / '
+      'maxConcurrent, and the "Aktualisieren" button is present and tappable',
+      (tester) async {
+        // Deliberately does NOT drive globalProcessSemaphore's concurrency
+        // here (see the plain `test` above for that coverage, isolated
+        // from widget pumping) — this test only asserts the row correctly
+        // displays whatever the real singleton's CURRENT value already is,
+        // and that the refresh affordance exists and can be tapped without
+        // throwing. No process is spawned or awaited on the global here,
+        // so there is nothing for this test to race against.
+        await _pumpSection(tester, telemetry: WatcherTelemetry());
 
-      expect(
-        find.textContaining(
-          '${globalProcessSemaphore.peakRunning} / '
-          '${globalProcessSemaphore.maxConcurrent}',
-        ),
-        findsOneWidget,
-      );
-    });
+        expect(
+          find.textContaining(
+            '${globalProcessSemaphore.peakRunning} / '
+            '${globalProcessSemaphore.maxConcurrent}',
+          ),
+          findsOneWidget,
+        );
+
+        await tester.tap(find.byIcon(LucideIcons.refreshCw));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.textContaining(
+            '${globalProcessSemaphore.peakRunning} / '
+            '${globalProcessSemaphore.maxConcurrent}',
+          ),
+          findsOneWidget,
+        );
+      },
+    );
   });
 }

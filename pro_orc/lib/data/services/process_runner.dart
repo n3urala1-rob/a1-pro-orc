@@ -136,7 +136,7 @@ Future<ProcessResult> _runProcess(
     // Drain the streams so the OS pipes are released even on the error path.
     unawaited(stdoutFuture.catchError((_) => ''));
     unawaited(stderrFuture.catchError((_) => ''));
-    throw TimeoutException('Git-Befehl hat zu lange gedauert', timeout);
+    throw TimeoutException('$executable hat zu lange gedauert', timeout);
   }
 
   final stdout = await stdoutFuture;
@@ -169,8 +169,24 @@ Future<ProcessResult> _runProcess(
 /// negative-pid kill would have targeted the wrong (much larger) group.
 /// `pgrep -P` needs no such setup and is available on macOS by default.
 ///
-/// Best-effort: if `pgrep` itself is unavailable or errors, still kills
-/// whatever pids were already discovered (never throws).
+/// Best-effort: if `pgrep` itself is unavailable, errors, or hangs (bounded
+/// by a 2s timeout per call so a stuck `pgrep` can never block the reap
+/// loop indefinitely), still kills whatever pids were already discovered
+/// (never throws).
+///
+/// KNOWN LIMITATION (review round 1, Reinhard probe 1c-2): a grandchild
+/// that gets reparented to `launchd` (pid 1) BEFORE this walk reaches it
+/// survives, because `pgrep -P <pid>` can no longer find it under its
+/// original (now-vanished) intermediate parent — the process tree this
+/// function walks has already changed shape by the time it's read.
+/// Demonstrated with a detached background job (`( sleep 300 & )`) that
+/// completes its reparent before the timeout fires. Deliberately NOT
+/// addressed with a second, name-based kill pass (e.g. matching on the
+/// original command line under launchd): the risk of a false-positive
+/// match killing an unrelated process the user is running is judged worse
+/// than the narrow window this leaves open. Accepted as a residual risk,
+/// not a silent gap — documented here so it isn't rediscovered as "new"
+/// in a future incident.
 Future<void> killProcessTree(int rootPid) async {
   final toKill = <int>[rootPid];
   final frontier = <int>[rootPid];
@@ -178,7 +194,10 @@ Future<void> killProcessTree(int rootPid) async {
   while (frontier.isNotEmpty) {
     final pid = frontier.removeLast();
     try {
-      final result = await Process.run('pgrep', ['-P', '$pid']);
+      final result = await Process.run('pgrep', ['-P', '$pid']).timeout(
+        const Duration(seconds: 2),
+        onTimeout: () => ProcessResult(0, 1, '', ''),
+      );
       if (result.exitCode == 0) {
         final childPids = (result.stdout as String)
             .split('\n')

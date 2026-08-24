@@ -31,9 +31,4 @@ class WatcherTelemetry {
   /// Count of events that passed [isNoiseEvent] filtering and were forwarded
   /// downstream (pre-debounce).
   int emittedEventCount = 0;
-
-  /// Best-effort process RSS in bytes at the moment telemetry was last
-  /// snapshotted, via [ProcessInfo.currentRss] (see [snapshotRss]). Null
-  /// until the first snapshot.
-  int? lastRssBytes;
 }

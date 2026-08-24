@@ -4,7 +4,7 @@
 
 # Pro Orc
 
-updated: 2026-08-23
+updated: 2026-08-24
 
 ## You are here
 
@@ -12,12 +12,12 @@ updated: 2026-08-23
 
 ## In-flight features
 
-- **017-skill-buttons-headless** — Skill buttons: one-click headless claude -p runs per project, output to vault (milestone: m12-vault-integration, stage: started) — scope: projects/pro-orc/spec/011-skill-buttons-headless.md, projects/pro-orc/plans/011-skill-buttons-headless-wave-plan.md
+None.
 
 ## Next cursor
 
-**017-skill-buttons-headless** — recommended next feature (all dependencies (014-session-skill-mining, 016-vault-status-writer) are done).
+None — no eligible feature (all done/cancelled, or blocked by unmet dependencies).
 
 ## How to continue
 
-Run `a1-plan` to create an executable plan for the next-cursor feature, or `a1-execute` if a plan already exists.
+Run `a1-progress` to review overall project state and decide the next milestone.

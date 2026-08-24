@@ -4,7 +4,7 @@ type: roadmap
 project: pro-orc
 title: "Pro Orc"
 status: active
-updated: 2026-08-23
+updated: 2026-08-24
 source: "scaffolded by a1-tools product init"
 milestones:
   - id: m1-stabilization
@@ -53,7 +53,7 @@ milestones:
     target: null
   - id: m12-vault-integration
     title: "ProOrc vault integration & skill buttons"
-    status: planned
+    status: done
     target: null
 features:
   - id: 002-project-organization
@@ -213,13 +213,13 @@ features:
   - id: 017-skill-buttons-headless
     milestone: m12-vault-integration
     title: "Skill buttons: one-click headless claude -p runs per project, output to vault"
-    status: in-flight
-    stage: started
+    status: done
+    stage: done
     depends_on:
       - 014-session-skill-mining
       - 016-vault-status-writer
     started: 2026-08-23
-    finished: null
+    finished: 2026-08-24
     spec_path: projects/pro-orc/spec/011-skill-buttons-headless.md
     plan_path: projects/pro-orc/plans/011-skill-buttons-headless-wave-plan.md
 next: null
@@ -237,13 +237,6 @@ None.
 
 ## Changelog
 
-- **2026-07-12** — milestone 'm8-project-organization' added — Grid/list toggle, custom groups, and a1-SpecForge badge for organizing many projects.
-- **2026-07-12** — feature '002-project-organization' added — Merge Code/Research tabs into one Projects view, group projects by context, add archive group.
-- **2026-07-12** — 002-project-organization -> started — stage transition via `product stage`
-- **2026-07-12** — feature.md created for '002-project-organization' — formal spec/plan attached via `product feature-init`
-- **2026-07-12** — adopt: migrated legacy .a1/roadmap.md (M1-M8) to docs/product/ROADMAP.md schema v1 — M1-M7 marked done from merged feature branches + merge commits on main (evidence ladder rung b: feature/v2.2-stabilization, feature/v3-m5-harness-visibility, feature/v3-m6-learning-loop, feature/v3-m7-network-costs) plus release tag v3.0.0; M8 carried over as in-progress (no completion evidence yet). Legacy .a1/roadmap.md kept as-is, not deleted.
-- **2026-07-13** — 002-project-organization -> complete — stage transition via `product stage`
-- **2026-07-13** — 002-project-organization -> merge — stage transition via `product stage`
 - **2026-07-13** — 002-project-organization -> origin-cleanup — stage transition via `product stage`
 - **2026-07-15** — 002-project-organization -> done — stage transition via `product stage`
 - **2026-07-15** — milestone 'm9-detail-roadmap-redesign' added — Non-technical, visual project detail + drill-down roadmap view
@@ -337,6 +330,13 @@ None.
 - **2026-08-23** — 016-vault-status-writer -> done — stage transition via `product stage`
 - **2026-08-23** — feature.md created for '017-skill-buttons-headless' — formal spec/plan attached via `product feature-init`
 - **2026-08-23** — 017-skill-buttons-headless -> started — stage transition via `product stage`
+- **2026-08-24** — 017-skill-buttons-headless -> complete — stage transition via `product stage`
+- **2026-08-24** — 017-skill-buttons-headless -> review — stage transition via `product stage`
+- **2026-08-24** — 017-skill-buttons-headless -> verify — stage transition via `product stage`
+- **2026-08-24** — 017-skill-buttons-headless -> merge — stage transition via `product stage`
+- **2026-08-24** — 017-skill-buttons-headless -> origin-cleanup — stage transition via `product stage`
+- **2026-08-24** — 017-skill-buttons-headless -> done — stage transition via `product stage`
+- **2026-08-24** — milestone m12-vault-integration status -> done — marker set via `product markers --set`
 
 ## Appendix — migrated details
 

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated": "2026-08-23T21:30:19.713Z",
+  "generated": "2026-08-24T11:52:06.603Z",
   "project": {
     "id": "pro-orc",
     "title": "Pro Orc",
@@ -76,7 +76,7 @@
     {
       "id": "m12-vault-integration",
       "title": "ProOrc vault integration & skill buttons",
-      "status": "planned",
+      "status": "done",
       "target": null
     }
   ],
@@ -273,20 +273,20 @@
       "id": "017-skill-buttons-headless",
       "milestone": "m12-vault-integration",
       "title": "Skill buttons: one-click headless claude -p runs per project, output to vault",
-      "status": "in-flight",
-      "stage": "started",
+      "status": "done",
+      "stage": "done",
       "depends_on": [
         "014-session-skill-mining",
         "016-vault-status-writer"
       ],
       "started": "2026-08-23",
-      "finished": null,
+      "finished": "2026-08-24",
       "spec_path": "projects/pro-orc/spec/011-skill-buttons-headless.md",
       "plan_path": "projects/pro-orc/plans/011-skill-buttons-headless-wave-plan.md"
     }
   ],
   "next": null,
-  "cursor": "017-skill-buttons-headless",
+  "cursor": null,
   "vision": {
     "path": "docs/product/VISION.md",
     "updated": "2026-07-15",

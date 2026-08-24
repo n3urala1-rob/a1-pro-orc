@@ -194,4 +194,21 @@ void main() {
       reason: 'Quick actions row must stay within the 240px grid cell',
     );
   });
+
+  testWidgets('ClaudeSkillsSection (spec 011 FR-002) is never rendered inside '
+      'ProjectCard — skill buttons exist only in the Detail Panel', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      const ProjectModel(
+        folderId: 'demo',
+        displayName: 'Demo',
+        path: '/tmp/demo',
+        projectType: ProjectType.code,
+      ),
+    );
+
+    expect(find.text('Claude-Skills'), findsNothing);
+  });
 }

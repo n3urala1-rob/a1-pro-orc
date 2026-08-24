@@ -4,6 +4,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:pro_orc/data/models/project_model.dart';
 import 'package:pro_orc/data/models/project_type.dart';
 import 'package:pro_orc/data/models/roadmap_data.dart';
+import 'package:pro_orc/features/shared/detail/claude_skills_section.dart';
 import 'package:pro_orc/features/shared/detail/description_section.dart';
 import 'package:pro_orc/features/shared/detail/file_preview_section.dart';
 import 'package:pro_orc/features/shared/detail/links_section.dart';
@@ -346,6 +347,11 @@ class _ProjectDetailPanelState extends ConsumerState<ProjectDetailPanel> {
           accent: accent,
           qa: qa,
         ),
+
+        // --- Claude-Skills (spec 011, Variant V2: own section, NOT merged
+        // into the quick-actions row above) ---
+        const SizedBox(height: 12),
+        ClaudeSkillsSection(project: project, colors: colors),
       ],
     );
   }

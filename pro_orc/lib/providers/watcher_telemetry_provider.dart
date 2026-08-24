@@ -9,9 +9,10 @@ import 'package:pro_orc/data/services/watcher_telemetry.dart';
 /// diagnostic, not reactive data the UI needs to rebuild live for — the
 /// Settings tab telemetry section reads the current snapshot on build/refresh
 /// rather than subscribing to a stream of updates.
-final watcherTelemetryProvider = NotifierProvider<WatcherTelemetryNotifier, WatcherTelemetry?>(
-  WatcherTelemetryNotifier.new,
-);
+final watcherTelemetryProvider =
+    NotifierProvider<WatcherTelemetryNotifier, WatcherTelemetry?>(
+      WatcherTelemetryNotifier.new,
+    );
 
 class WatcherTelemetryNotifier extends Notifier<WatcherTelemetry?> {
   @override

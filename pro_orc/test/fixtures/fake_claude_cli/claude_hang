@@ -1,0 +1,5 @@
+#!/bin/bash
+# Fake `claude` CLI fixture that hangs far longer than any test's injected
+# watchdog timeout (tests use e.g. 200-300ms, never the real 10 minutes) —
+# used to prove HeadlessSkillRunner's watchdog actually kills a hung run.
+sleep 300

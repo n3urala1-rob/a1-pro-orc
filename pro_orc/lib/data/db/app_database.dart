@@ -11,6 +11,7 @@ import 'tables/app_config_table.dart';
 import 'tables/group_collapse_state_table.dart';
 import 'tables/project_groups_table.dart';
 import 'tables/project_settings_table.dart';
+import 'tables/skill_run_table.dart';
 
 part 'app_database.g.dart';
 
@@ -20,13 +21,14 @@ part 'app_database.g.dart';
     ProjectSettingsTable,
     ProjectGroupsTable,
     GroupCollapseStateTable,
+    SkillRunTable,
   ],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? e]) : super(e ?? _connect());
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -60,6 +62,9 @@ class AppDatabase extends _$AppDatabase {
           projectSettingsTable,
           projectSettingsTable.vaultLastSyncAt,
         );
+      }
+      if (from < 7) {
+        await m.createTable(skillRunTable);
       }
     },
     beforeOpen: (details) async {
@@ -459,5 +464,59 @@ class AppDatabase extends _$AppDatabase {
         vaultLastSyncAt: Value(at),
       ),
     );
+  }
+
+  /// Returns the most recent persisted run record for a given
+  /// (folderId, skillId) pair, or null if that skill has never been run for
+  /// that project. There is at most one row per pair — see
+  /// [upsertSkillRun].
+  Future<SkillRunTableData?> getSkillRun(String folderId, String skillId) {
+    return (select(skillRunTable)..where(
+          (t) => t.folderId.equals(folderId) & t.skillId.equals(skillId),
+        ))
+        .getSingleOrNull();
+  }
+
+  /// Inserts or replaces the run record for [row]'s (folderId, skillId)
+  /// pair. A new run for the same pair always replaces the prior row rather
+  /// than appending — this feature keeps no multi-run history (spec Out of
+  /// Scope), so delete-then-insert is the simplest correct upsert given the
+  /// max-one-row-per-pair invariant.
+  Future<void> upsertSkillRun(SkillRunTableCompanion row) async {
+    final folderId = row.folderId.value;
+    final skillId = row.skillId.value;
+    await transaction(() async {
+      await (delete(skillRunTable)..where(
+            (t) => t.folderId.equals(folderId) & t.skillId.equals(skillId),
+          ))
+          .go();
+      await into(skillRunTable).insert(row);
+    });
+  }
+
+  /// Transitions an existing run record (by its surrogate [id]) to a
+  /// terminal (or updated) [status], optionally setting [completedAt].
+  /// Leaves the PID/start-time/output-path fields untouched.
+  Future<void> updateSkillRunStatus(
+    String id, {
+    required String status,
+    DateTime? completedAt,
+  }) async {
+    await (update(skillRunTable)..where((t) => t.id.equals(id))).write(
+      SkillRunTableCompanion(
+        status: Value(status),
+        completedAt: completedAt != null
+            ? Value(completedAt)
+            : const Value.absent(),
+      ),
+    );
+  }
+
+  /// Returns every run record currently persisted as `status = 'running'`,
+  /// used by startup reconciliation to avoid scanning every row.
+  Future<List<SkillRunTableData>> getAllRunningSkillRuns() {
+    return (select(
+      skillRunTable,
+    )..where((t) => t.status.equals('running'))).get();
   }
 }

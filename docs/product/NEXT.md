@@ -12,7 +12,7 @@ updated: 2026-08-23
 
 ## In-flight features
 
-None.
+- **017-skill-buttons-headless** — Skill buttons: one-click headless claude -p runs per project, output to vault (milestone: m12-vault-integration, stage: started) — scope: projects/pro-orc/spec/011-skill-buttons-headless.md, projects/pro-orc/plans/011-skill-buttons-headless-wave-plan.md
 
 ## Next cursor
 

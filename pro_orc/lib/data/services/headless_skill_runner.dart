@@ -4,7 +4,7 @@ import 'dart:io';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
-import 'claude_detection_service.dart';
+import 'package:pro_orc/data/services/claude_detection_service.dart';
 
 /// Terminal (or in-flight) outcome of a headless skill run. Mirrors the
 /// `status` text column in `SkillRunTable` (schema v7) — stored as text

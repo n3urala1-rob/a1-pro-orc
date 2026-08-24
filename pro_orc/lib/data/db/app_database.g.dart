@@ -1654,6 +1654,595 @@ class GroupCollapseStateTableCompanion
   }
 }
 
+class $SkillRunTableTable extends SkillRunTable
+    with TableInfo<$SkillRunTableTable, SkillRunTableData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SkillRunTableTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _folderIdMeta = const VerificationMeta(
+    'folderId',
+  );
+  @override
+  late final GeneratedColumn<String> folderId = GeneratedColumn<String>(
+    'folder_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _skillIdMeta = const VerificationMeta(
+    'skillId',
+  );
+  @override
+  late final GeneratedColumn<String> skillId = GeneratedColumn<String>(
+    'skill_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _pidMeta = const VerificationMeta('pid');
+  @override
+  late final GeneratedColumn<int> pid = GeneratedColumn<int>(
+    'pid',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _processStartTimeMeta = const VerificationMeta(
+    'processStartTime',
+  );
+  @override
+  late final GeneratedColumn<DateTime> processStartTime =
+      GeneratedColumn<DateTime>(
+        'process_start_time',
+        aliasedName,
+        false,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: true,
+      );
+  static const VerificationMeta _startedAtMeta = const VerificationMeta(
+    'startedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> startedAt = GeneratedColumn<DateTime>(
+    'started_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _statusMeta = const VerificationMeta('status');
+  @override
+  late final GeneratedColumn<String> status = GeneratedColumn<String>(
+    'status',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _completedAtMeta = const VerificationMeta(
+    'completedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> completedAt = GeneratedColumn<DateTime>(
+    'completed_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _outputFilePathMeta = const VerificationMeta(
+    'outputFilePath',
+  );
+  @override
+  late final GeneratedColumn<String> outputFilePath = GeneratedColumn<String>(
+    'output_file_path',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    folderId,
+    skillId,
+    pid,
+    processStartTime,
+    startedAt,
+    status,
+    completedAt,
+    outputFilePath,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'skill_run_table';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SkillRunTableData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('folder_id')) {
+      context.handle(
+        _folderIdMeta,
+        folderId.isAcceptableOrUnknown(data['folder_id']!, _folderIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_folderIdMeta);
+    }
+    if (data.containsKey('skill_id')) {
+      context.handle(
+        _skillIdMeta,
+        skillId.isAcceptableOrUnknown(data['skill_id']!, _skillIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_skillIdMeta);
+    }
+    if (data.containsKey('pid')) {
+      context.handle(
+        _pidMeta,
+        pid.isAcceptableOrUnknown(data['pid']!, _pidMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_pidMeta);
+    }
+    if (data.containsKey('process_start_time')) {
+      context.handle(
+        _processStartTimeMeta,
+        processStartTime.isAcceptableOrUnknown(
+          data['process_start_time']!,
+          _processStartTimeMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_processStartTimeMeta);
+    }
+    if (data.containsKey('started_at')) {
+      context.handle(
+        _startedAtMeta,
+        startedAt.isAcceptableOrUnknown(data['started_at']!, _startedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_startedAtMeta);
+    }
+    if (data.containsKey('status')) {
+      context.handle(
+        _statusMeta,
+        status.isAcceptableOrUnknown(data['status']!, _statusMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_statusMeta);
+    }
+    if (data.containsKey('completed_at')) {
+      context.handle(
+        _completedAtMeta,
+        completedAt.isAcceptableOrUnknown(
+          data['completed_at']!,
+          _completedAtMeta,
+        ),
+      );
+    }
+    if (data.containsKey('output_file_path')) {
+      context.handle(
+        _outputFilePathMeta,
+        outputFilePath.isAcceptableOrUnknown(
+          data['output_file_path']!,
+          _outputFilePathMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_outputFilePathMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  SkillRunTableData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SkillRunTableData(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      folderId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}folder_id'],
+      )!,
+      skillId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}skill_id'],
+      )!,
+      pid: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}pid'],
+      )!,
+      processStartTime: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}process_start_time'],
+      )!,
+      startedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}started_at'],
+      )!,
+      status: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}status'],
+      )!,
+      completedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}completed_at'],
+      ),
+      outputFilePath: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}output_file_path'],
+      )!,
+    );
+  }
+
+  @override
+  $SkillRunTableTable createAlias(String alias) {
+    return $SkillRunTableTable(attachedDatabase, alias);
+  }
+}
+
+class SkillRunTableData extends DataClass
+    implements Insertable<SkillRunTableData> {
+  final String id;
+  final String folderId;
+  final String skillId;
+
+  /// PID of the `claude -p` child (NOT the watchdog wrapper) — this is the
+  /// process reconciliation compares against on app restart.
+  final int pid;
+
+  /// OS-reported process start time of [pid] at spawn time (e.g. `ps -o
+  /// lstart= -p PID`), stored so a later PID-reuse cannot be mistaken for
+  /// the same run.
+  final DateTime processStartTime;
+  final DateTime startedAt;
+
+  /// running | success | failure | timeout | cancelled — see
+  /// [SkillRunStatus] in headless_skill_runner.dart (Wave 2) for the
+  /// canonical enum; stored as text for forward-compatible migrations.
+  final String status;
+  final DateTime? completedAt;
+
+  /// Path to the captured stdout/stderr output file for this run (Wave 2's
+  /// watchdog redirects output to a file since the process is detached and
+  /// Pro Orc cannot stream a detached process's stdout).
+  final String outputFilePath;
+  const SkillRunTableData({
+    required this.id,
+    required this.folderId,
+    required this.skillId,
+    required this.pid,
+    required this.processStartTime,
+    required this.startedAt,
+    required this.status,
+    this.completedAt,
+    required this.outputFilePath,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['folder_id'] = Variable<String>(folderId);
+    map['skill_id'] = Variable<String>(skillId);
+    map['pid'] = Variable<int>(pid);
+    map['process_start_time'] = Variable<DateTime>(processStartTime);
+    map['started_at'] = Variable<DateTime>(startedAt);
+    map['status'] = Variable<String>(status);
+    if (!nullToAbsent || completedAt != null) {
+      map['completed_at'] = Variable<DateTime>(completedAt);
+    }
+    map['output_file_path'] = Variable<String>(outputFilePath);
+    return map;
+  }
+
+  SkillRunTableCompanion toCompanion(bool nullToAbsent) {
+    return SkillRunTableCompanion(
+      id: Value(id),
+      folderId: Value(folderId),
+      skillId: Value(skillId),
+      pid: Value(pid),
+      processStartTime: Value(processStartTime),
+      startedAt: Value(startedAt),
+      status: Value(status),
+      completedAt: completedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(completedAt),
+      outputFilePath: Value(outputFilePath),
+    );
+  }
+
+  factory SkillRunTableData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SkillRunTableData(
+      id: serializer.fromJson<String>(json['id']),
+      folderId: serializer.fromJson<String>(json['folderId']),
+      skillId: serializer.fromJson<String>(json['skillId']),
+      pid: serializer.fromJson<int>(json['pid']),
+      processStartTime: serializer.fromJson<DateTime>(json['processStartTime']),
+      startedAt: serializer.fromJson<DateTime>(json['startedAt']),
+      status: serializer.fromJson<String>(json['status']),
+      completedAt: serializer.fromJson<DateTime?>(json['completedAt']),
+      outputFilePath: serializer.fromJson<String>(json['outputFilePath']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'folderId': serializer.toJson<String>(folderId),
+      'skillId': serializer.toJson<String>(skillId),
+      'pid': serializer.toJson<int>(pid),
+      'processStartTime': serializer.toJson<DateTime>(processStartTime),
+      'startedAt': serializer.toJson<DateTime>(startedAt),
+      'status': serializer.toJson<String>(status),
+      'completedAt': serializer.toJson<DateTime?>(completedAt),
+      'outputFilePath': serializer.toJson<String>(outputFilePath),
+    };
+  }
+
+  SkillRunTableData copyWith({
+    String? id,
+    String? folderId,
+    String? skillId,
+    int? pid,
+    DateTime? processStartTime,
+    DateTime? startedAt,
+    String? status,
+    Value<DateTime?> completedAt = const Value.absent(),
+    String? outputFilePath,
+  }) => SkillRunTableData(
+    id: id ?? this.id,
+    folderId: folderId ?? this.folderId,
+    skillId: skillId ?? this.skillId,
+    pid: pid ?? this.pid,
+    processStartTime: processStartTime ?? this.processStartTime,
+    startedAt: startedAt ?? this.startedAt,
+    status: status ?? this.status,
+    completedAt: completedAt.present ? completedAt.value : this.completedAt,
+    outputFilePath: outputFilePath ?? this.outputFilePath,
+  );
+  SkillRunTableData copyWithCompanion(SkillRunTableCompanion data) {
+    return SkillRunTableData(
+      id: data.id.present ? data.id.value : this.id,
+      folderId: data.folderId.present ? data.folderId.value : this.folderId,
+      skillId: data.skillId.present ? data.skillId.value : this.skillId,
+      pid: data.pid.present ? data.pid.value : this.pid,
+      processStartTime: data.processStartTime.present
+          ? data.processStartTime.value
+          : this.processStartTime,
+      startedAt: data.startedAt.present ? data.startedAt.value : this.startedAt,
+      status: data.status.present ? data.status.value : this.status,
+      completedAt: data.completedAt.present
+          ? data.completedAt.value
+          : this.completedAt,
+      outputFilePath: data.outputFilePath.present
+          ? data.outputFilePath.value
+          : this.outputFilePath,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SkillRunTableData(')
+          ..write('id: $id, ')
+          ..write('folderId: $folderId, ')
+          ..write('skillId: $skillId, ')
+          ..write('pid: $pid, ')
+          ..write('processStartTime: $processStartTime, ')
+          ..write('startedAt: $startedAt, ')
+          ..write('status: $status, ')
+          ..write('completedAt: $completedAt, ')
+          ..write('outputFilePath: $outputFilePath')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    folderId,
+    skillId,
+    pid,
+    processStartTime,
+    startedAt,
+    status,
+    completedAt,
+    outputFilePath,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SkillRunTableData &&
+          other.id == this.id &&
+          other.folderId == this.folderId &&
+          other.skillId == this.skillId &&
+          other.pid == this.pid &&
+          other.processStartTime == this.processStartTime &&
+          other.startedAt == this.startedAt &&
+          other.status == this.status &&
+          other.completedAt == this.completedAt &&
+          other.outputFilePath == this.outputFilePath);
+}
+
+class SkillRunTableCompanion extends UpdateCompanion<SkillRunTableData> {
+  final Value<String> id;
+  final Value<String> folderId;
+  final Value<String> skillId;
+  final Value<int> pid;
+  final Value<DateTime> processStartTime;
+  final Value<DateTime> startedAt;
+  final Value<String> status;
+  final Value<DateTime?> completedAt;
+  final Value<String> outputFilePath;
+  final Value<int> rowid;
+  const SkillRunTableCompanion({
+    this.id = const Value.absent(),
+    this.folderId = const Value.absent(),
+    this.skillId = const Value.absent(),
+    this.pid = const Value.absent(),
+    this.processStartTime = const Value.absent(),
+    this.startedAt = const Value.absent(),
+    this.status = const Value.absent(),
+    this.completedAt = const Value.absent(),
+    this.outputFilePath = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  SkillRunTableCompanion.insert({
+    required String id,
+    required String folderId,
+    required String skillId,
+    required int pid,
+    required DateTime processStartTime,
+    required DateTime startedAt,
+    required String status,
+    this.completedAt = const Value.absent(),
+    required String outputFilePath,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       folderId = Value(folderId),
+       skillId = Value(skillId),
+       pid = Value(pid),
+       processStartTime = Value(processStartTime),
+       startedAt = Value(startedAt),
+       status = Value(status),
+       outputFilePath = Value(outputFilePath);
+  static Insertable<SkillRunTableData> custom({
+    Expression<String>? id,
+    Expression<String>? folderId,
+    Expression<String>? skillId,
+    Expression<int>? pid,
+    Expression<DateTime>? processStartTime,
+    Expression<DateTime>? startedAt,
+    Expression<String>? status,
+    Expression<DateTime>? completedAt,
+    Expression<String>? outputFilePath,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (folderId != null) 'folder_id': folderId,
+      if (skillId != null) 'skill_id': skillId,
+      if (pid != null) 'pid': pid,
+      if (processStartTime != null) 'process_start_time': processStartTime,
+      if (startedAt != null) 'started_at': startedAt,
+      if (status != null) 'status': status,
+      if (completedAt != null) 'completed_at': completedAt,
+      if (outputFilePath != null) 'output_file_path': outputFilePath,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  SkillRunTableCompanion copyWith({
+    Value<String>? id,
+    Value<String>? folderId,
+    Value<String>? skillId,
+    Value<int>? pid,
+    Value<DateTime>? processStartTime,
+    Value<DateTime>? startedAt,
+    Value<String>? status,
+    Value<DateTime?>? completedAt,
+    Value<String>? outputFilePath,
+    Value<int>? rowid,
+  }) {
+    return SkillRunTableCompanion(
+      id: id ?? this.id,
+      folderId: folderId ?? this.folderId,
+      skillId: skillId ?? this.skillId,
+      pid: pid ?? this.pid,
+      processStartTime: processStartTime ?? this.processStartTime,
+      startedAt: startedAt ?? this.startedAt,
+      status: status ?? this.status,
+      completedAt: completedAt ?? this.completedAt,
+      outputFilePath: outputFilePath ?? this.outputFilePath,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (folderId.present) {
+      map['folder_id'] = Variable<String>(folderId.value);
+    }
+    if (skillId.present) {
+      map['skill_id'] = Variable<String>(skillId.value);
+    }
+    if (pid.present) {
+      map['pid'] = Variable<int>(pid.value);
+    }
+    if (processStartTime.present) {
+      map['process_start_time'] = Variable<DateTime>(processStartTime.value);
+    }
+    if (startedAt.present) {
+      map['started_at'] = Variable<DateTime>(startedAt.value);
+    }
+    if (status.present) {
+      map['status'] = Variable<String>(status.value);
+    }
+    if (completedAt.present) {
+      map['completed_at'] = Variable<DateTime>(completedAt.value);
+    }
+    if (outputFilePath.present) {
+      map['output_file_path'] = Variable<String>(outputFilePath.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SkillRunTableCompanion(')
+          ..write('id: $id, ')
+          ..write('folderId: $folderId, ')
+          ..write('skillId: $skillId, ')
+          ..write('pid: $pid, ')
+          ..write('processStartTime: $processStartTime, ')
+          ..write('startedAt: $startedAt, ')
+          ..write('status: $status, ')
+          ..write('completedAt: $completedAt, ')
+          ..write('outputFilePath: $outputFilePath, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -1664,6 +2253,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       $ProjectGroupsTableTable(this);
   late final $GroupCollapseStateTableTable groupCollapseStateTable =
       $GroupCollapseStateTableTable(this);
+  late final $SkillRunTableTable skillRunTable = $SkillRunTableTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -1673,6 +2263,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     projectSettingsTable,
     projectGroupsTable,
     groupCollapseStateTable,
+    skillRunTable,
   ];
 }
 
@@ -2582,6 +3173,292 @@ typedef $$GroupCollapseStateTableTableProcessedTableManager =
       GroupCollapseStateTableData,
       PrefetchHooks Function()
     >;
+typedef $$SkillRunTableTableCreateCompanionBuilder =
+    SkillRunTableCompanion Function({
+      required String id,
+      required String folderId,
+      required String skillId,
+      required int pid,
+      required DateTime processStartTime,
+      required DateTime startedAt,
+      required String status,
+      Value<DateTime?> completedAt,
+      required String outputFilePath,
+      Value<int> rowid,
+    });
+typedef $$SkillRunTableTableUpdateCompanionBuilder =
+    SkillRunTableCompanion Function({
+      Value<String> id,
+      Value<String> folderId,
+      Value<String> skillId,
+      Value<int> pid,
+      Value<DateTime> processStartTime,
+      Value<DateTime> startedAt,
+      Value<String> status,
+      Value<DateTime?> completedAt,
+      Value<String> outputFilePath,
+      Value<int> rowid,
+    });
+
+class $$SkillRunTableTableFilterComposer
+    extends Composer<_$AppDatabase, $SkillRunTableTable> {
+  $$SkillRunTableTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get folderId => $composableBuilder(
+    column: $table.folderId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get skillId => $composableBuilder(
+    column: $table.skillId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get pid => $composableBuilder(
+    column: $table.pid,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get processStartTime => $composableBuilder(
+    column: $table.processStartTime,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get startedAt => $composableBuilder(
+    column: $table.startedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get completedAt => $composableBuilder(
+    column: $table.completedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get outputFilePath => $composableBuilder(
+    column: $table.outputFilePath,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$SkillRunTableTableOrderingComposer
+    extends Composer<_$AppDatabase, $SkillRunTableTable> {
+  $$SkillRunTableTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get folderId => $composableBuilder(
+    column: $table.folderId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get skillId => $composableBuilder(
+    column: $table.skillId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get pid => $composableBuilder(
+    column: $table.pid,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get processStartTime => $composableBuilder(
+    column: $table.processStartTime,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get startedAt => $composableBuilder(
+    column: $table.startedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get completedAt => $composableBuilder(
+    column: $table.completedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get outputFilePath => $composableBuilder(
+    column: $table.outputFilePath,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$SkillRunTableTableAnnotationComposer
+    extends Composer<_$AppDatabase, $SkillRunTableTable> {
+  $$SkillRunTableTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get folderId =>
+      $composableBuilder(column: $table.folderId, builder: (column) => column);
+
+  GeneratedColumn<String> get skillId =>
+      $composableBuilder(column: $table.skillId, builder: (column) => column);
+
+  GeneratedColumn<int> get pid =>
+      $composableBuilder(column: $table.pid, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get processStartTime => $composableBuilder(
+    column: $table.processStartTime,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get startedAt =>
+      $composableBuilder(column: $table.startedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get completedAt => $composableBuilder(
+    column: $table.completedAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get outputFilePath => $composableBuilder(
+    column: $table.outputFilePath,
+    builder: (column) => column,
+  );
+}
+
+class $$SkillRunTableTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $SkillRunTableTable,
+          SkillRunTableData,
+          $$SkillRunTableTableFilterComposer,
+          $$SkillRunTableTableOrderingComposer,
+          $$SkillRunTableTableAnnotationComposer,
+          $$SkillRunTableTableCreateCompanionBuilder,
+          $$SkillRunTableTableUpdateCompanionBuilder,
+          (
+            SkillRunTableData,
+            BaseReferences<
+              _$AppDatabase,
+              $SkillRunTableTable,
+              SkillRunTableData
+            >,
+          ),
+          SkillRunTableData,
+          PrefetchHooks Function()
+        > {
+  $$SkillRunTableTableTableManager(_$AppDatabase db, $SkillRunTableTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SkillRunTableTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SkillRunTableTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$SkillRunTableTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> folderId = const Value.absent(),
+                Value<String> skillId = const Value.absent(),
+                Value<int> pid = const Value.absent(),
+                Value<DateTime> processStartTime = const Value.absent(),
+                Value<DateTime> startedAt = const Value.absent(),
+                Value<String> status = const Value.absent(),
+                Value<DateTime?> completedAt = const Value.absent(),
+                Value<String> outputFilePath = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SkillRunTableCompanion(
+                id: id,
+                folderId: folderId,
+                skillId: skillId,
+                pid: pid,
+                processStartTime: processStartTime,
+                startedAt: startedAt,
+                status: status,
+                completedAt: completedAt,
+                outputFilePath: outputFilePath,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String folderId,
+                required String skillId,
+                required int pid,
+                required DateTime processStartTime,
+                required DateTime startedAt,
+                required String status,
+                Value<DateTime?> completedAt = const Value.absent(),
+                required String outputFilePath,
+                Value<int> rowid = const Value.absent(),
+              }) => SkillRunTableCompanion.insert(
+                id: id,
+                folderId: folderId,
+                skillId: skillId,
+                pid: pid,
+                processStartTime: processStartTime,
+                startedAt: startedAt,
+                status: status,
+                completedAt: completedAt,
+                outputFilePath: outputFilePath,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$SkillRunTableTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $SkillRunTableTable,
+      SkillRunTableData,
+      $$SkillRunTableTableFilterComposer,
+      $$SkillRunTableTableOrderingComposer,
+      $$SkillRunTableTableAnnotationComposer,
+      $$SkillRunTableTableCreateCompanionBuilder,
+      $$SkillRunTableTableUpdateCompanionBuilder,
+      (
+        SkillRunTableData,
+        BaseReferences<_$AppDatabase, $SkillRunTableTable, SkillRunTableData>,
+      ),
+      SkillRunTableData,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -2597,4 +3474,6 @@ class $AppDatabaseManager {
         _db,
         _db.groupCollapseStateTable,
       );
+  $$SkillRunTableTableTableManager get skillRunTable =>
+      $$SkillRunTableTableTableManager(_db, _db.skillRunTable);
 }

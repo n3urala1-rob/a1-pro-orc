@@ -225,6 +225,35 @@ void main() {
     });
 
     test(
+      'missing watchdog script: throws a loud StateError instead of '
+      'silently failing (BLOCKER-3 regression — the script was previously '
+      'never bundled into release builds)',
+      () async {
+        final runner = HeadlessSkillRunner(
+          claudeExecutable: _fixture('claude'),
+          watchdogScriptPath: p.join(tempDir.path, 'does_not_exist.sh'),
+          outputDirectory: tempDir.path,
+          timeout: const Duration(seconds: 5),
+        );
+
+        await expectLater(
+          runner.start(
+            projectPath: tempDir.path,
+            skillId: 'a1-progress',
+            skillPrompt: 'status check',
+          ),
+          throwsA(isA<StateError>()),
+        );
+
+        // No output/pid files were created — the failure happens before
+        // any process is spawned.
+        final entries = await tempDir.list().toList();
+        expect(entries.where((e) => e.path.endsWith('.log')), isEmpty);
+        expect(entries.where((e) => e.path.endsWith('.pid')), isEmpty);
+      },
+    );
+
+    test(
       'detached survives parent: the spawned process outlives this test '
       'holding no reference to the Process handle beyond SpawnResult',
       () async {

@@ -153,6 +153,27 @@ class HeadlessSkillRunner {
     final pidFilePath = p.join(outputDir, '$runToken.pid');
 
     final watchdogScript = _resolveWatchdogScriptPath();
+    if (!File(watchdogScript).existsSync()) {
+      // Loud, specific failure rather than a silent no-op: BLOCKER-3
+      // (2026-08-24 review) found this script simply missing from every
+      // release build for a while — if that ever regresses again (a
+      // future bundling change, a broken CI artifact, ...), this must
+      // fail immediately and visibly instead of Process.start silently
+      // erroring in a way that looks identical to a hung watchdog. The
+      // caller (SkillRunNotifier.start, after BLOCKER-2's fix) already
+      // catches any spawn-path exception, releases the concurrency slot,
+      // and surfaces StartSkillOutcome.spawnFailed to the UI.
+      developer.log(
+        'skill_watchdog.sh not found at resolved path: $watchdogScript — '
+        'the headless skill run cannot be started.',
+        name: 'headless_skill_runner',
+      );
+      throw StateError(
+        'skill_watchdog.sh not found at $watchdogScript — check that it is '
+        'bundled into Contents/Resources for a release build, or present '
+        'at scripts/skill_watchdog.sh in a dev checkout.',
+      );
+    }
     final watchdogArgs = [
       timeout.inSeconds.toString(),
       outputFilePath,

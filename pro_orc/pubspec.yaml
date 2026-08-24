@@ -42,6 +42,11 @@ dependencies:
   macos_window_utils: ^1.9.1
   meta: ^1.9.0
   flutter_riverpod: ^3.2.1
+  # Kept only for the WatchEvent/ChangeType data types — the watch ENGINE is
+  # dart:io's Directory.watch(recursive: true) since bcfa0c8 (process-storm
+  # round 3): the package's own RecursiveDirectoryWatcher retained an
+  # unbounded in-memory tree with no exclusion hook, the root cause of the
+  # round-3 process storm. See watcher_service.dart's class doc.
   watcher: ^1.2.1
   stream_transform: ^2.1.1
   drift: ^2.31.0

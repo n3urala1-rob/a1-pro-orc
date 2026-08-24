@@ -213,12 +213,12 @@ features:
   - id: 017-skill-buttons-headless
     milestone: m12-vault-integration
     title: "Skill buttons: one-click headless claude -p runs per project, output to vault"
-    status: planned
-    stage: null
+    status: in-flight
+    stage: started
     depends_on:
       - 014-session-skill-mining
       - 016-vault-status-writer
-    started: null
+    started: 2026-08-23
     finished: null
     spec_path: projects/pro-orc/spec/011-skill-buttons-headless.md
     plan_path: projects/pro-orc/plans/011-skill-buttons-headless-wave-plan.md
@@ -237,7 +237,6 @@ None.
 
 ## Changelog
 
-- **2026-07-12** — milestone 'm7-network-costs' added — Full network view, plugin skills, and token cost estimation.
 - **2026-07-12** — milestone 'm8-project-organization' added — Grid/list toggle, custom groups, and a1-SpecForge badge for organizing many projects.
 - **2026-07-12** — feature '002-project-organization' added — Merge Code/Research tabs into one Projects view, group projects by context, add archive group.
 - **2026-07-12** — 002-project-organization -> started — stage transition via `product stage`
@@ -337,6 +336,7 @@ None.
 - **2026-08-23** — 016-vault-status-writer -> origin-cleanup — stage transition via `product stage`
 - **2026-08-23** — 016-vault-status-writer -> done — stage transition via `product stage`
 - **2026-08-23** — feature.md created for '017-skill-buttons-headless' — formal spec/plan attached via `product feature-init`
+- **2026-08-23** — 017-skill-buttons-headless -> started — stage transition via `product stage`
 
 ## Appendix — migrated details
 

@@ -19,6 +19,7 @@ import 'dart:io';
 
 import 'package:pro_orc/data/models/deletion_result.dart';
 import 'package:pro_orc/data/models/external_resource.dart';
+import 'package:pro_orc/data/services/process_runner.dart';
 
 /// Builds the argument list for `vercel project remove <name>`.
 ///
@@ -194,12 +195,27 @@ typedef ProcessRunner =
       bool runInShell,
     });
 
+/// Routed through [runProcessWithTimeout] (process-storm round 3, WP2) —
+/// closes a semaphore bypass AND adds a real timeout this call previously
+/// lacked entirely (a bare `Process.run` never returns until the child
+/// exits on its own). `gh repo delete` can legitimately take longer than
+/// the git-read timeout elsewhere in the app, so a generous 30s budget is
+/// used here rather than [runProcessWithTimeout]'s 5s default. [runInShell]
+/// is accepted for signature compatibility with [ProcessRunner] but
+/// `runProcessWithTimeout` always runs in shell (project convention), so a
+/// caller passing `false` would only differ if such a caller existed —
+/// none currently does.
 Future<ProcessResult> defaultProcessRunner(
   String executable,
   List<String> arguments, {
   bool runInShell = true,
 }) {
-  return Process.run(executable, arguments, runInShell: runInShell);
+  return runProcessWithTimeout(
+    executable,
+    arguments,
+    '.',
+    timeout: const Duration(seconds: 30),
+  );
 }
 
 /// Deletes the GitHub repository at [ownerRepo] (`<owner>/<repo>`) via
@@ -309,13 +325,16 @@ typedef VercelProcessRunner =
 /// Runs under `runInShell: true` (required so the spawned process inherits
 /// Homebrew's PATH — see the project's `Process.run` convention), which
 /// means the PID `Process.start` returns is the intermediate shell, not
-/// `vercel` itself. A plain SIGTERM `process.kill()` on that PID would not
-/// reliably reach the `vercel` child, leaving it running as an orphan if
-/// it doesn't exit on its own. To avoid that: on timeout this sends
-/// SIGKILL (which macOS also delivers to the shell's child on `sh -c`
-/// termination in practice) and then always awaits [Process.exitCode] —
-/// with its own short guard timeout — so the process is reaped rather
-/// than left as a zombie either way.
+/// `vercel` itself. A plain SIGTERM/SIGKILL `process.kill()` on that PID
+/// only reaches the shell, not any grandchild it forked (`vercel`'s own
+/// Node process) — the round-2 postmortem's claim that SIGKILL "also
+/// reaches the shell's child on `sh -c` termination in practice" was
+/// disproven empirically by process-storm round 3's `kill_probe.dart`
+/// (a real orphaned grandchild survived). On timeout this now kills the
+/// WHOLE process tree via [killProcessTree] (see process_runner.dart for
+/// why a tree walk was chosen over POSIX process groups) and then always
+/// awaits [Process.exitCode] — with its own short guard timeout — so the
+/// process is reaped rather than left as a zombie either way.
 Future<VercelProcessOutcome> defaultVercelProcessRunner(
   List<String> arguments, {
   Duration timeout = const Duration(seconds: 15),
@@ -348,7 +367,7 @@ Future<VercelProcessOutcome> defaultVercelProcessRunner(
         stderr: stderrBuffer.toString(),
       );
     } on TimeoutException {
-      process.kill(ProcessSignal.sigkill);
+      await killProcessTree(process.pid);
       // Always reap after kill so the child never lingers as a zombie —
       // bounded by its own short guard in case even SIGKILL doesn't land
       // (e.g. a wedged shell wrapper).

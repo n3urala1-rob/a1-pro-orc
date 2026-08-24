@@ -54,6 +54,17 @@ CHILD_EXIT=$?
 
 # Child exited on its own — cancel the timeout kill, it must not fire late
 # and hit an unrelated process that later reuses this process group's PID.
+#
+# Known limitation (MINOR, 2026-08-24 review): killing $WATCHDOG_TIMER_PID
+# terminates the `( sleep ...; kill ... )` subshell itself; on most shells
+# this also reaps the `sleep` it was foreground-waiting on, but a `sleep`
+# left running as an orphan in some edge case is a leaked short-lived
+# process at worst (it holds no resources this feature cares about, sends
+# no signal since its parent subshell is already dead, and exits on its
+# own once TIMEOUT elapses) — deliberately left as-is rather than risking
+# a change to this injection-safety-critical script (see the file's own
+# header comment on the no-shell-interpolation contract, and the P1a-c
+# probes this script must keep passing) for a cosmetic cleanup.
 kill "$WATCHDOG_TIMER_PID" 2>/dev/null
 wait "$WATCHDOG_TIMER_PID" 2>/dev/null
 

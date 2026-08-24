@@ -56,6 +56,7 @@ class _FakeVaultRecordWriter implements VaultRecordWriter {
       'vaultRoot': vaultRoot,
       'projectHubSlug': projectHubSlug,
       'skillSlug': skillSlug,
+      'skillDisplayName': skillDisplayName,
       'outcome': outcome,
     });
     return const VaultRecordWriteResult.written('/tmp/fake-record.md');
@@ -352,6 +353,42 @@ void main() {
       await waitUntil(() => fakeVaultWriter.calls.isNotEmpty);
       expect(fakeVaultWriter.calls, hasLength(1));
     });
+
+    test(
+      'an explicit skillDisplayName threads through to the vault record '
+      'writer instead of duplicating the raw skillId',
+      () async {
+        final outputFile = p.join(tempOutputDir.path, 'named.log');
+        fakeRunner.nextResult = () => alreadyExitedFakeResult(outputFile);
+
+        await notifier().start(
+          project('proj-a'),
+          'a1-progress',
+          'x',
+          skillDisplayName: 'a1-progress (Checkpoint-Status)',
+        );
+
+        await waitUntil(() => fakeVaultWriter.calls.isNotEmpty);
+        expect(
+          fakeVaultWriter.calls.single['skillDisplayName'],
+          'a1-progress (Checkpoint-Status)',
+        );
+      },
+    );
+
+    test(
+      'omitting skillDisplayName falls back to skillId (default parameter '
+      'behavior for existing/other callers)',
+      () async {
+        final outputFile = p.join(tempOutputDir.path, 'unnamed.log');
+        fakeRunner.nextResult = () => alreadyExitedFakeResult(outputFile);
+
+        await notifier().start(project('proj-a'), 'a1-progress', 'x');
+
+        await waitUntil(() => fakeVaultWriter.calls.isNotEmpty);
+        expect(fakeVaultWriter.calls.single['skillDisplayName'], 'a1-progress');
+      },
+    );
 
     group('terminal status classification (exit-code file)', () {
       test(

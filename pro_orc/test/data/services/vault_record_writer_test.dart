@@ -293,6 +293,39 @@ void main() {
       },
     );
 
+    test(
+      'YAML title escaping: a skillDisplayName containing a colon/quote/'
+      'newline is rendered as a safe double-quoted YAML scalar, never '
+      'breaking the frontmatter block',
+      () async {
+        final result = await writer.write(
+          vaultRoot: vaultDir.path,
+          projectHubSlug: 'pro-orc',
+          skillSlug: 'a1-progress',
+          skillDisplayName: 'a1-progress: "status" check\nnewline',
+          outcome: 'erfolgreich',
+          bodyContent: 'output',
+          completedAt: completedAt,
+        );
+
+        final content = await File(result.path!).readAsString();
+        final lines = content.split('\n');
+
+        // Exactly two '---' frontmatter delimiter lines — a raw ':' or
+        // newline in the title must not have introduced a third by
+        // accident (e.g. splitting the YAML block early).
+        expect(lines.where((l) => l == '---').length, equals(2));
+
+        final titleLine = lines.firstWhere((l) => l.startsWith('title:'));
+        expect(
+          titleLine,
+          equals(
+            r'title: "a1-progress: \"status\" check\nnewline – erfolgreich"',
+          ),
+        );
+      },
+    );
+
     test('no shell usage (structural): the module has zero Process spawn '
         'references — plain file I/O (File/Directory) only', () {
       final source = File(

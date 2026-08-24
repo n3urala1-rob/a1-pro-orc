@@ -240,7 +240,12 @@ class _SkillButton extends ConsumerWidget {
     unawaited(
       ref
           .read(skillRunProvider.notifier)
-          .start(project, skill.id, skill.prompt)
+          .start(
+            project,
+            skill.id,
+            skill.prompt,
+            skillDisplayName: skill.displayName,
+          )
           .then((result) {
             if (!context.mounted) return;
             final messenger = ScaffoldMessenger.maybeOf(context);

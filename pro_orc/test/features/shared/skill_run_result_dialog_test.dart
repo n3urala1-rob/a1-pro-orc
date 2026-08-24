@@ -156,6 +156,57 @@ void main() {
       expect(find.textContaining('abgebrochen'), findsOneWidget);
     });
 
+    testWidgets(
+      'output larger than 100 KB is truncated to the last 100 KB with a '
+      'German truncation hint shown',
+      (tester) async {
+        // 100 KB = 102400 bytes. Build content well past that with a
+        // distinctive marker at the very end so we can prove the TAIL
+        // (not the head) survived truncation.
+        final head = 'A' * (110 * 1024);
+        const tailMarker = 'TAIL_MARKER_END_OF_OUTPUT';
+        final row = _row(
+          status: 'success',
+          outputContent: '$head$tailMarker',
+          outputFile: File('${tempDir.path}/large.log'),
+        );
+
+        await pumpDialog(tester, row);
+
+        expect(
+          find.textContaining('Ausgabe gekürzt'),
+          findsOneWidget,
+          reason: 'truncation hint must be shown for output over 100 KB',
+        );
+        expect(find.textContaining(tailMarker), findsOneWidget);
+
+        // The full 110KB+ of 'A's must NOT all be present in the rendered
+        // text — only the last 100 KB survived.
+        final selectableTextWidget = tester.widget<SelectableText>(
+          find.byType(SelectableText),
+        );
+        expect(
+          selectableTextWidget.data!.length,
+          lessThanOrEqualTo(100 * 1024),
+        );
+      },
+    );
+
+    testWidgets(
+      'output at or under 100 KB shows no truncation hint',
+      (tester) async {
+        final row = _row(
+          status: 'success',
+          outputContent: 'short output, well under the cap',
+          outputFile: File('${tempDir.path}/small.log'),
+        );
+
+        await pumpDialog(tester, row);
+
+        expect(find.textContaining('Ausgabe gekürzt'), findsNothing);
+      },
+    );
+
     testWidgets('a missing/unreadable output file shows a neutral empty state, '
         'never a crash', (tester) async {
       final now = DateTime.now();

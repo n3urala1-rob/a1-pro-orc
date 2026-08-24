@@ -141,10 +141,11 @@ class VaultRecordWriter {
   }) {
     final timeStr = _formatTime(completedAt);
     final fence = _fenceFor(bodyContent);
+    final title = _yamlQuoted('$skillDisplayName – $outcome');
     final buffer = StringBuffer()
       ..writeln('---')
       ..writeln('type: record')
-      ..writeln('title: $skillDisplayName – $outcome')
+      ..writeln('title: $title')
       ..writeln('date: $dateStr')
       ..writeln('---')
       ..writeln()
@@ -181,6 +182,24 @@ class VaultRecordWriter {
     }
     final fenceLength = longest >= 3 ? longest + 1 : 3;
     return '`' * fenceLength;
+  }
+
+  /// Renders [value] as a YAML double-quoted scalar for the frontmatter
+  /// `title:` field — defensive hardening (NIT, 2026-08-24 review): today's
+  /// callers only ever pass a code-owned [CuratedSkill.displayName] (see
+  /// `claude_skills_section.dart`) or the raw skillId, neither of which can
+  /// currently contain a `:`/`#`/quote that would break YAML frontmatter
+  /// parsing, but a value that flows this deep into user-visible template
+  /// data is worth quoting on principle rather than relying on that staying
+  /// true forever. Always double-quoted (never left bare or single-quoted)
+  /// so every YAML special character is handled by one consistent escape
+  /// rule.
+  String _yamlQuoted(String value) {
+    final escaped = value
+        .replaceAll('\\', r'\\')
+        .replaceAll('"', r'\"')
+        .replaceAll('\n', r'\n');
+    return '"$escaped"';
   }
 
   bool _isContained(String targetPath, String root) {

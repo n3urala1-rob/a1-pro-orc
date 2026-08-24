@@ -181,8 +181,9 @@ class SkillRunNotifier extends Notifier<SkillRunState> {
   Future<StartSkillResult> start(
     ProjectModel project,
     String skillId,
-    String skillPrompt,
-  ) async {
+    String skillPrompt, {
+    String? skillDisplayName,
+  }) async {
     final limiter = ref.read(skillRunConcurrencyLimiterProvider);
     if (!limiter.canStart(project.folderId)) {
       return const StartSkillResult(StartSkillOutcome.rejectedConcurrencyLimit);
@@ -256,6 +257,7 @@ class SkillRunNotifier extends Notifier<SkillRunState> {
       _awaitCompletionAndFinalize(
         project: project,
         skillId: skillId,
+        skillDisplayName: skillDisplayName ?? skillId,
         runId: runId,
         pid: spawnResult.pid,
         outputFilePath: spawnResult.outputFilePath,
@@ -265,18 +267,46 @@ class SkillRunNotifier extends Notifier<SkillRunState> {
     return const StartSkillResult(StartSkillOutcome.started);
   }
 
+  /// How long the completion poll below keeps its snappy 500ms interval
+  /// before backing off — most runs finish well inside a minute, so this
+  /// keeps early completion feeling responsive without polling that often
+  /// for the whole (up to 10-minute) run.
+  static const _pollBackoffAfter = Duration(minutes: 1);
+
   /// Polls [pid] until it exits (the process is detached — there is no
   /// `Process` handle to await directly), then determines the terminal
   /// status from the watchdog-captured output file and finalizes state.
+  ///
+  /// Known limitation (MINOR, 2026-08-24 review): the loop condition below
+  /// uses [isProcessAlive], a bare existence check (`ps -p`), not the
+  /// start-time identity check [cancel] and [SkillRunReconciler] both use.
+  /// If [pid] exits and the OS reuses that exact PID for an unrelated
+  /// process within one poll interval, this loop would treat the reused
+  /// PID as "still running" and never finalize this run — it would poll
+  /// forever (or until [ref] is disposed). This is a narrow race (PID
+  /// reuse within ~500ms-3s, immediately after this specific `claude -p`
+  /// PID frees up) and was left as-is rather than restructured under
+  /// review-fix time pressure; a full fix would thread [SpawnResult.
+  /// processStartTime] into this loop and re-verify it each tick (the same
+  /// pattern [cancel] now uses), touching the polling loop's core exit
+  /// condition and its existing E2E coverage in
+  /// `skill_run_lifecycle_end_to_end_test.dart` — deferred to a follow-up
+  /// rather than risked here.
   Future<void> _awaitCompletionAndFinalize({
     required ProjectModel project,
     required String skillId,
     required String runId,
     required int pid,
     required String outputFilePath,
+    String skillDisplayName = '',
   }) async {
+    final pollStartedAt = DateTime.now();
     while (await isProcessAlive(pid)) {
-      await Future.delayed(const Duration(milliseconds: 500));
+      final elapsed = DateTime.now().difference(pollStartedAt);
+      final pollInterval = elapsed < _pollBackoffAfter
+          ? const Duration(milliseconds: 500)
+          : const Duration(seconds: 3);
+      await Future.delayed(pollInterval);
       // The provider (and its Ref) may have been disposed while this
       // background poll was sleeping — e.g. the app quit, or (in tests) the
       // ProviderContainer was torn down. There is nothing left to finalize
@@ -319,6 +349,9 @@ class SkillRunNotifier extends Notifier<SkillRunState> {
       await _writeVaultRecordAndNotify(
         folderId: project.folderId,
         skillId: skillId,
+        skillDisplayName: skillDisplayName.isNotEmpty
+            ? skillDisplayName
+            : skillId,
         row: updatedRow,
         status: status,
         project: project,
@@ -442,9 +475,17 @@ class SkillRunNotifier extends Notifier<SkillRunState> {
     required SkillRunTableData row,
     required SkillRunStatus status,
     ProjectModel? project,
+    String? skillDisplayName,
   }) async {
     final db = ref.read(appDatabaseProvider);
     final projectDisplayName = project?.displayName ?? folderId;
+    // Falls back to the raw skillId for callers that don't have the
+    // curated display name handy — cancel() and reconciliation-on-startup
+    // (which only ever sees the persisted SkillRunTable row, not a
+    // CuratedSkill) — so the note/notification is never worse than before,
+    // only better when the real display name is available (the `start()`
+    // caller in claude_skills_section.dart).
+    final resolvedSkillDisplayName = skillDisplayName ?? skillId;
 
     try {
       final vaultRoot = await resolveVaultRoot(db);
@@ -473,7 +514,7 @@ class SkillRunNotifier extends Notifier<SkillRunState> {
           vaultRoot: vaultRoot,
           projectHubSlug: hubSlug,
           skillSlug: skillId,
-          skillDisplayName: skillId,
+          skillDisplayName: resolvedSkillDisplayName,
           outcome: _germanOutcome(status),
           bodyContent: bodyContent,
           completedAt: row.completedAt ?? DateTime.now(),
@@ -489,7 +530,7 @@ class SkillRunNotifier extends Notifier<SkillRunState> {
     if (!ref.mounted) return;
     final notificationService = ref.read(skillNotificationServiceProvider);
     await notificationService.notifyRunCompleted(
-      skillDisplayName: skillId,
+      skillDisplayName: resolvedSkillDisplayName,
       projectDisplayName: projectDisplayName,
       status: status,
     );

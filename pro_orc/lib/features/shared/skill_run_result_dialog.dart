@@ -47,7 +47,17 @@ class SkillRunResultDialog extends StatefulWidget {
 }
 
 class _SkillRunResultDialogState extends State<SkillRunResultDialog> {
+  /// Displayed output is capped to the last [_maxDisplayedBytes] bytes — a
+  /// long-running skill's captured stdout/stderr could otherwise be
+  /// megabytes, and rendering all of it into a single [SelectableText]
+  /// widget makes the dialog sluggish to open/scroll for no benefit (the
+  /// most recent output is what a user actually wants when triaging a
+  /// failure or timeout). 100 KB keeps the dialog snappy while still
+  /// showing several thousand lines of context.
+  static const _maxDisplayedBytes = 100 * 1024;
+
   String? _content;
+  bool _truncated = false;
   bool _loading = true;
 
   @override
@@ -58,10 +68,17 @@ class _SkillRunResultDialogState extends State<SkillRunResultDialog> {
 
   Future<void> _loadContent() async {
     String? content;
+    var truncated = false;
     try {
       final file = File(widget.row.outputFilePath);
       if (await file.exists()) {
-        content = await file.readAsString();
+        final full = await file.readAsString();
+        if (full.length > _maxDisplayedBytes) {
+          content = full.substring(full.length - _maxDisplayedBytes);
+          truncated = true;
+        } else {
+          content = full;
+        }
       }
     } catch (_) {
       // Swallowed — an unreadable output file renders as "kein Inhalt
@@ -70,6 +87,7 @@ class _SkillRunResultDialogState extends State<SkillRunResultDialog> {
     if (mounted) {
       setState(() {
         _content = content;
+        _truncated = truncated;
         _loading = false;
       });
     }
@@ -175,24 +193,42 @@ class _SkillRunResultDialogState extends State<SkillRunResultDialog> {
       );
     }
 
-    return Container(
-      constraints: const BoxConstraints(maxHeight: 320),
-      decoration: BoxDecoration(
-        color: colors.bgElev.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      padding: const EdgeInsets.all(12),
-      child: SingleChildScrollView(
-        child: SelectableText(
-          content,
-          style: TextStyle(
-            color: colors.textSec,
-            fontSize: 11.5,
-            fontFamily: 'monospace',
-            height: 1.5,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (_truncated)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: Text(
+              'Ausgabe gekürzt — nur die letzten 100 KB werden angezeigt.',
+              style: TextStyle(
+                color: colors.textDim,
+                fontSize: 10.5,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ),
+        Container(
+          constraints: const BoxConstraints(maxHeight: 320),
+          decoration: BoxDecoration(
+            color: colors.bgElev.withValues(alpha: 0.5),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          padding: const EdgeInsets.all(12),
+          child: SingleChildScrollView(
+            child: SelectableText(
+              content,
+              style: TextStyle(
+                color: colors.textSec,
+                fontSize: 11.5,
+                fontFamily: 'monospace',
+                height: 1.5,
+              ),
+            ),
           ),
         ),
-      ),
+      ],
     );
   }
 

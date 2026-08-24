@@ -43,8 +43,9 @@ class _FakeSkillRunNotifier extends SkillRunNotifier {
   Future<StartSkillResult> start(
     ProjectModel project,
     String skillId,
-    String skillPrompt,
-  ) async {
+    String skillPrompt, {
+    String? skillDisplayName,
+  }) async {
     startCalls++;
     return StartSkillResult(outcomeToReturn);
   }

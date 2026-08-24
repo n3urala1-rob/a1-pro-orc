@@ -59,6 +59,19 @@ dependencies:
   # 2026-07-15) — ahead of `flutter_markdown` (Google-discontinued, last
   # release 2025-05) and `markdown_widget` (last release 2025-04).
   gpt_markdown: ^1.1.7
+  # macOS completion notifications for headless skill runs (011, Wave 4,
+  # FR-013). `local_notifier` (the plan's first choice) was rejected per
+  # this project's dependency-validation gate: MIT-licensed but its last
+  # release is 2 years old (v0.1.6) with only 115 likes as of 2026-08-24 —
+  # stale by the `gpt_markdown` precedent's "actively maintained" bar.
+  # `flutter_local_notifications` is the documented fallback: BSD-3-Clause,
+  # last release 15 days ago (v22.3.0) as of 2026-08-24, pub.dev score
+  # 150/150, 7.34k likes / 2.52M downloads — actively maintained and far
+  # more widely used. Uses macOS's User Notifications Framework; no extra
+  # entitlement is documented as required for local (non-remote)
+  # notifications, and this app's sandbox is already disabled (see
+  # macos/Runner/*.entitlements), so none was speculatively added.
+  flutter_local_notifications: ^22.3.0
 
 dev_dependencies:
   flutter_test:
